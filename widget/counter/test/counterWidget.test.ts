@@ -12,6 +12,7 @@ const document = new JSDOM("<!doctype html><html><body></body></html>").window.d
 
 const harness = (): WidgetHarness => new WidgetHarness({ widget: counterWidget });
 
+// #region insert-command
 test("the extension command inserts a counter at the selection", () => {
   const editor = createEditor({ namespace: "counter-command", nodes: [WidgetNode], onError: (error: unknown) => { throw error; } });
   editor.update(() => {
@@ -35,6 +36,7 @@ test("the extension command inserts a counter at the selection", () => {
     assert.equal(inserted.getWidgetType(), "example.counter");
   });
 });
+// #endregion insert-command
 
 test("the extension command refuses without a selection", () => {
   const extension = new CounterWidgetExtension();
@@ -71,18 +73,23 @@ test("the extension command refuses without a selection", () => {
   }]);
 });
 
+// #region derive-count
 test("derive publishes the current count", () => {
   const result = harness().derive({ count: 4 });
   assert.deepEqual(result, { kind: "value", value: { count: 4 } });
 });
+// #endregion derive-count
 
+// #region bake-markup
 test("bake returns markup without a warning", () => {
   const result = harness().bake({ count: 4 }, { forms: ["markup"] });
   assert.equal(result.form?.form, "markup");
   assert.match(result.markup, />4</);
   assert.deepEqual(result.warnings, []);
 });
+// #endregion bake-markup
 
+// #region bake-accessible-image
 test("bake returns an accessible image without a warning", () => {
   const result = harness().bake({ count: 4 }, { forms: ["image"] });
   assert.equal(result.form?.form, "image");
@@ -90,7 +97,9 @@ test("bake returns an accessible image without a warning", () => {
   assert.match(result.markup, /Counter showing 4/);
   assert.deepEqual(result.warnings, []);
 });
+// #endregion bake-accessible-image
 
+// #region migrate-version-one
 test("migrate converts version one state to the current shape", () => {
   assert.deepEqual(harness().migrate(1, { value: 4 }), {
     kind: "migrated",
@@ -98,7 +107,9 @@ test("migrate converts version one state to the current shape", () => {
     state: { count: 4 },
   });
 });
+// #endregion migrate-version-one
 
+// #region mount-resolved-step
 test("mount uses a resolved step input", async () => {
   const mounted = harness().mount({ count: 0 }, { document, inputs: { step: 5 } });
   const output = mounted.element.querySelector<HTMLOutputElement>("[data-counter-count]");
@@ -112,7 +123,9 @@ test("mount uses a resolved step input", async () => {
   assert.deepEqual(mounted.writes, [{ count: 5 }]);
   mounted.unmount();
 });
+// #endregion mount-resolved-step
 
+// #region mount-defaults-to-one
 test("mount defaults to one when the step input is unwired", async () => {
   const mounted = harness().mount({ count: 0 }, { document });
   const output = mounted.element.querySelector<HTMLOutputElement>("[data-counter-count]");
@@ -125,7 +138,9 @@ test("mount defaults to one when the step input is unwired", async () => {
   assert.deepEqual(mounted.writes, [{ count: 1 }]);
   mounted.unmount();
 });
+// #endregion mount-defaults-to-one
 
+// #region mount-click-state
 test("mount redraws after a click and records the state write", async () => {
   const mounted = harness().mount({ count: 0 }, { document });
   const output = mounted.element.querySelector<HTMLOutputElement>("[data-counter-count]");
@@ -144,7 +159,9 @@ test("mount redraws after a click and records the state write", async () => {
   assert.deepEqual(mounted.state, { count: 2 });
   mounted.unmount();
 });
+// #endregion mount-click-state
 
+// #region mount-read-only
 test("mount disables the button in read-only mode", () => {
   const mounted = harness().mount({ count: 0 }, { document, readOnly: true });
   const button = mounted.element.querySelector<HTMLButtonElement>("button");
@@ -152,7 +169,9 @@ test("mount disables the button in read-only mode", () => {
   assert.equal(button.disabled, true);
   mounted.unmount();
 });
+// #endregion mount-read-only
 
+// #region render-error
 test("renderError explains a failed live render", () => {
   const failingWidget = {
     ...counterWidget,
@@ -164,13 +183,17 @@ test("renderError explains a failed live render", () => {
   assert.equal(mounted.element.textContent, "Counter failed to render: test failure");
   mounted.unmount();
 });
+// #endregion render-error
 
+// #region unmount-interior
 test("unmount removes the widget interior", () => {
   const mounted = harness().mount({ count: 0 }, { document });
   mounted.unmount();
   assert.equal(mounted.element.childElementCount, 0);
 });
+// #endregion unmount-interior
 
+// #region fill-template
 test("a document holding a counter opens through fillTemplate", () => {
   const editor = createEditor({ namespace: "counter-template", nodes: [WidgetNode], onError: (error: unknown) => { throw error; } });
   editor.update(() => {
@@ -189,3 +212,4 @@ test("a document holding a counter opens through fillTemplate", () => {
   assert.equal(result.ok, true);
   assert.deepEqual(result.report, { unresolved: [], invalid: [], findings: [] });
 });
+// #endregion fill-template

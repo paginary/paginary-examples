@@ -160,10 +160,12 @@ export class CounterWidgetExtension extends EditorExtension {
     // #endregion commands-short
   }
 
+  // #region command-enabled
   commandEnabled(name: string, selection: SelectionInfo, ctx: EditorContext): boolean {
     if (name !== INSERT_COUNTER) return super.commandEnabled(name, selection, ctx);
     return selection.kind === "caret" || selection.kind === "range";
   }
+  // #endregion command-enabled
   // #endregion commands
 
   // #region widgets
