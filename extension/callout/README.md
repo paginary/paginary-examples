@@ -4,7 +4,7 @@ This example is a complete block-callout extension. It includes a Lexical node, 
 
 ## Run
 
-`npm install` installs the standalone dependencies. `npm test` runs the unit and headless tests. `npm run build` emits the package's JavaScript and declarations. Run `npx playwright install chromium` once to install the browser, then `npm run test:browser` runs the page test. `npm pack` creates the publishable archive.
+Copy this folder to start your own extension. The example installs once `@paginary/core` is published on npm. `npm install` installs the standalone dependencies, and `npm run typecheck` checks the sources while you edit. `npm test` runs the unit and headless tests. `npm run build` emits the package's JavaScript and declarations. Run `npx playwright install chromium` once to install the browser, then `npm run test:browser` runs the page test. `npm pack` creates the publishable archive.
 
 ## Files
 
