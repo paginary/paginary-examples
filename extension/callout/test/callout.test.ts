@@ -4,12 +4,15 @@ import { test } from "node:test";
 import { JSDOM } from "jsdom";
 import { createEditor, $createParagraphNode, $createRangeSelection, $createTextNode, $getRoot, $isElementNode, $setSelection } from "lexical";
 import { fillTemplate } from "@paginary/core/headless";
-import { Editor, type DocumentTheme, type EditorContext } from "@paginary/core";
+import { defaultStyleResolver, Editor, type DocumentTheme, type EditorContext, type ExtractContext, type ParagraphBlock } from "@paginary/core";
 import {
   $createCalloutNode,
   $isCalloutNode,
+  CALLOUT_EXTENSION_NAME,
   CALLOUT_SLICE,
   CalloutExtension,
+  CalloutFlattener,
+  type CalloutBlock,
   CalloutNode,
   SET_CALLOUT_VARIANT,
   TURN_INTO_CALLOUT,
@@ -130,8 +133,40 @@ test("turns a paragraph into a callout and sets a themed variant, while refusing
   });
 // #endregion run-command-and-refusal
   assert.equal(extension.selectionSlice(ctx)?.variant, "themed");
-  assert.equal(CALLOUT_SLICE.extension, "example-callout");
+  assert.equal(CALLOUT_SLICE.extension, CALLOUT_EXTENSION_NAME);
   cleanup();
+});
+
+test("flattened callout text carries the callout typography role", () => {
+  const editor = createEditor({ namespace: "callout-role", nodes: [CalloutNode], onError: (error) => { throw error; } });
+  editor.update(() => {
+    const callout = $createCalloutNode();
+    callout.append($createTextNode("Role me"));
+    $getRoot().clear().append(callout);
+  }, { discrete: true });
+
+  editor.getEditorState().read(() => {
+    const node = $getRoot().getFirstChild();
+    assert.ok($isCalloutNode(node));
+    const context: Pick<ExtractContext, "containedParagraph"> = {
+      containedParagraph: (paragraph, options) => {
+        const role = options?.role ?? paragraph.getType();
+        return {
+          blocks: [{
+            key: `${paragraph.getKey()}-p`,
+            type: "paragraph",
+            content: [],
+            baseStyle: defaultStyleResolver()(role),
+            box: options?.box,
+          }],
+        };
+      },
+    };
+    const [block] = new CalloutFlattener().flatten(node, context as ExtractContext);
+    assert.ok(block);
+    const paragraph = (block as CalloutBlock).blocks[0] as ParagraphBlock | undefined;
+    assert.equal(paragraph?.baseStyle.role, "callout");
+  });
 });
 
 test("fixture callout holds its text directly", () => {
@@ -242,10 +277,11 @@ test("host selection reads the callout slice under the extension name", () => {
       actualBoundingBoxDescent: 2,
     }),
   })) as unknown as typeof canvasPrototype.getContext;
+  let editor: Editor | undefined;
   try {
     const host = dom.window.document.createElement("div");
     dom.window.document.body.appendChild(host);
-    const editor = new Editor(host, { extensions: [new CalloutExtension()] });
+    editor = new Editor(host, { extensions: [new CalloutExtension()] });
     editor.editor.update(() => {
       const callout = $createCalloutNode("warning");
       const text = $createTextNode("Read this warning");
@@ -257,8 +293,8 @@ test("host selection reads the callout slice under the extension name", () => {
       $setSelection(selection);
     }, { discrete: true });
     assert.deepEqual(editor.selection.get(CALLOUT_SLICE), { variant: "warning" });
-    editor.destroy();
   } finally {
+    editor?.destroy();
     canvasPrototype.getContext = previousGetContext;
     if (previous.document === undefined) delete runtime.document;
     else runtime.document = previous.document;

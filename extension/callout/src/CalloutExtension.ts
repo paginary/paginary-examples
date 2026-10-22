@@ -26,9 +26,10 @@ import { CalloutNode, $createCalloutNode, $isCalloutNode, type CalloutVariant } 
 import { DEFAULT_CALLOUT_INDENT_PX, CalloutFlattener, CalloutLayouter, CalloutRenderer } from "./calloutLayout.ts";
 
 // #region names
+export const CALLOUT_EXTENSION_NAME = "example-callout";
 export const TURN_INTO_CALLOUT = "example-turn-into-callout";
 export const SET_CALLOUT_VARIANT = "example-set-callout-variant";
-export const CALLOUT_SLICE = selectionSlice<{ readonly variant: string }>("example-callout");
+export const CALLOUT_SLICE = selectionSlice<{ readonly variant: string }>(CALLOUT_EXTENSION_NAME);
 
 const DEFAULT_WARNING_VARIANT = {
   "--pg-callout-bg": "#fffbeb",
@@ -45,7 +46,7 @@ function calloutFromSelection(): CalloutNode | null {
 // #region class
 /** A complete block-callout extension built only on the public core seams. */
 export class CalloutExtension extends EditorExtension {
-  readonly name = "example-callout";
+  readonly name = CALLOUT_EXTENSION_NAME;
   private readonly flattener = new CalloutFlattener();
   private readonly layouter = new CalloutLayouter();
   private readonly renderer = new CalloutRenderer();

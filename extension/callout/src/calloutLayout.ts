@@ -45,7 +45,7 @@ export class CalloutFlattener implements BlockFlattener {
 
   flatten(node: LexicalNode, ctx: ExtractContext): BlockInput[] {
     if (!$isCalloutNode(node)) return [];
-    const { blocks, spaceBefore, spaceAfter } = ctx.containedParagraph(node, { box: { tag: "p", role: "callout" } });
+    const { blocks, spaceBefore, spaceAfter } = ctx.containedParagraph(node, { role: "callout", box: { tag: "p" } });
     const block: CalloutBlock = {
       key: node.getKey(),
       type: CALLOUT_BLOCK,
