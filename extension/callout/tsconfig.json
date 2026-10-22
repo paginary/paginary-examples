@@ -15,5 +15,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "test", "example"]
+  "include": ["src", "test", "example", "playwright.config.ts"]
 }

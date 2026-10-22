@@ -16,4 +16,8 @@ cp -r extension/callout my-callout
 cd my-callout
 npm install
 npm test
+npm run build
+npx playwright install chromium
+npm run test:browser
+npm pack
 ```

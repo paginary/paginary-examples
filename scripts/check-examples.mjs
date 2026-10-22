@@ -35,10 +35,57 @@ class ExampleCheck {
       const testOutput = `${testResult.stdout}\n${testResult.stderr}`;
       const testCount = testOutput.match(/(?:1\.\.|# tests )(\d+)/)?.[1] ?? "unknown";
       console.log(`${this.id}: ${testCount} tests passed`);
+      const packageJson = JSON.parse(readFileSync(join(copyRoot, "package.json"), "utf8"));
+      if (packageJson.scripts?.build) this.checkPackage(copyRoot);
+      if (packageJson.scripts?.["test:browser"]) this.runBrowserTests(copyRoot);
       console.log(`${this.id}: example checks passed`);
     } finally {
       rmSync(copyRoot, { recursive: true, force: true });
     }
+  }
+
+  /** Pack the example, then prove a fresh consumer can install and use the public package surface. */
+  checkPackage(copyRoot) {
+    const packageJson = JSON.parse(readFileSync(join(copyRoot, "package.json"), "utf8"));
+    const packDirectory = mkdtempSync(join(tmpdir(), "pg-example-package-"));
+    let archivePath;
+    try {
+      const packResult = this.runTool(copyRoot, "package", executable("npm"), ["pack", "--json", "--pack-destination", packDirectory]);
+      const metadata = JSON.parse(packResult.stdout)[0];
+      const files = metadata.files.map(({ path }) => path.replace(/^package\//, ""));
+      const allowed = (file) => file === "package.json" || file === "README.md" || file === "LICENSE" || file.startsWith("dist/");
+      if (!files.some((file) => file.startsWith("dist/")) || files.some((file) => !allowed(file))) {
+        throw new Error(`${this.id}: package contains unexpected files: ${files.join(", ")}`);
+      }
+      archivePath = join(packDirectory, metadata.filename);
+      if (!existsSync(archivePath)) throw new Error(`${this.id}: package archive was not created`);
+      console.log(`${this.id}: package check passed`);
+
+      const consumerRoot = mkdtempSync(join(tmpdir(), "pg-example-consumer-"));
+      try {
+        writeFileSync(join(consumerRoot, "package.json"), JSON.stringify({ private: true, type: "module" }, null, 2));
+        const peers = Object.entries(packageJson.peerDependencies ?? {}).map(([name, version]) => `${name}@${version}`);
+        this.runTool(consumerRoot, "consumer install", executable("npm"), ["install", "--no-package-lock", "--ignore-scripts", archivePath, this.coreArchive, ...peers]);
+        this.checkLexical(consumerRoot);
+        writeFileSync(join(consumerRoot, "consumer.mjs"), 'import { CalloutExtension } from "paginary-example-callout";\nif (!(new CalloutExtension() instanceof CalloutExtension)) throw new Error("CalloutExtension was not constructed");\n');
+        this.runTool(consumerRoot, "consumer import", executable("node"), ["consumer.mjs"]);
+        writeFileSync(join(consumerRoot, "consumer.ts"), 'import { CalloutExtension } from "paginary-example-callout";\nnew CalloutExtension();\n');
+        this.runTool(consumerRoot, "consumer typecheck", executable("npx"), ["--no-install", "tsc", "--noEmit", "--module", "ESNext", "--moduleResolution", "bundler", "--target", "ES2020", "--strict", "--skipLibCheck", "consumer.ts"]);
+      } finally {
+        rmSync(consumerRoot, { recursive: true, force: true });
+      }
+    } finally {
+      rmSync(packDirectory, { recursive: true, force: true });
+    }
+  }
+
+  /** Install the browser engine and run the copied example's Playwright tests. */
+  runBrowserTests(copyRoot) {
+    const browserInstallArgs = ["--no-install", "playwright", "install", "chromium"];
+    if (process.env.CI) browserInstallArgs.push("--with-deps");
+    this.runTool(copyRoot, "browser install", executable("npx"), browserInstallArgs);
+    this.runTool(copyRoot, "browser tests", executable("npm"), ["run", "test:browser"]);
+    console.log(`${this.id}: browser test passed`);
   }
 
   /** Require the README file list to match every tracked file in this example. */
