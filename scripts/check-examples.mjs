@@ -19,7 +19,7 @@ class ExampleCheck {
     this.coreArchive = coreArchive;
   }
 
-  /** Run the isolated install, typecheck, one-Lexical check, and example tests. */
+  /** Run the isolated install, typecheck, one-Lexical check, unit tests, package check, and browser test. */
   run() {
     this.checkFileList();
     this.checkLicence();
@@ -36,7 +36,7 @@ class ExampleCheck {
       const testCount = testOutput.match(/(?:1\.\.|# tests )(\d+)/)?.[1] ?? "unknown";
       console.log(`${this.id}: ${testCount} tests passed`);
       const packageJson = JSON.parse(readFileSync(join(copyRoot, "package.json"), "utf8"));
-      if (packageJson.scripts?.build) this.checkPackage(copyRoot);
+      if (packageJson.scripts?.build) this.checkPackage(copyRoot, packageJson);
       if (packageJson.scripts?.["test:browser"]) this.runBrowserTests(copyRoot);
       console.log(`${this.id}: example checks passed`);
     } finally {
@@ -44,9 +44,8 @@ class ExampleCheck {
     }
   }
 
-  /** Pack the example, then prove a fresh consumer can install and use the public package surface. */
-  checkPackage(copyRoot) {
-    const packageJson = JSON.parse(readFileSync(join(copyRoot, "package.json"), "utf8"));
+  /** Pack the example, prove its named public surface in a fresh consumer, and typecheck it. */
+  checkPackage(copyRoot, packageJson) {
     const packDirectory = mkdtempSync(join(tmpdir(), "pg-example-package-"));
     let archivePath;
     try {
@@ -68,9 +67,9 @@ class ExampleCheck {
         const tools = packageJson.devDependencies?.typescript ? [`typescript@${packageJson.devDependencies.typescript}`] : [];
         this.runTool(consumerRoot, "consumer install", executable("npm"), ["install", "--no-package-lock", "--ignore-scripts", archivePath, this.coreArchive, ...peers, ...tools]);
         this.checkLexical(consumerRoot);
-        writeFileSync(join(consumerRoot, "consumer.mjs"), 'import { CalloutExtension } from "paginary-example-callout";\nif (!(new CalloutExtension() instanceof CalloutExtension)) throw new Error("CalloutExtension was not constructed");\n');
-        this.runTool(consumerRoot, "consumer import", executable("node"), ["consumer.mjs"]);
-        writeFileSync(join(consumerRoot, "consumer.ts"), 'import { CalloutExtension } from "paginary-example-callout";\nnew CalloutExtension();\n');
+        cpSync(join(copyRoot, "test/package-smoke.mjs"), join(consumerRoot, "package-smoke.mjs"));
+        this.runTool(consumerRoot, "consumer smoke", executable("node"), ["package-smoke.mjs", packageJson.name]);
+        writeFileSync(join(consumerRoot, "consumer.ts"), `import * as packageExports from "${packageJson.name}";\nvoid packageExports;\n`);
         this.runTool(consumerRoot, "consumer typecheck", executable("npx"), ["--no-install", "tsc", "--noEmit", "--module", "ESNext", "--moduleResolution", "bundler", "--target", "ES2020", "--strict", "--skipLibCheck", "consumer.ts"]);
       } finally {
         rmSync(consumerRoot, { recursive: true, force: true });

@@ -30,12 +30,12 @@
   },
   "devDependencies": {
     "@lexical/selection": "^0.46.0",
-    "@playwright/test": "1.55.0",
+    "@playwright/test": "1.64.0",
     "@types/jsdom": "21.1.7",
     "@types/node": "24.7.2",
     "jsdom": "26.1.0",
     "lexical": "^0.46.0",
     "typescript": "5.9.3",
-    "vite": "6.3.5"
+    "vite": "6.4.4"
   }
 }

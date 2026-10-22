@@ -9,7 +9,7 @@ Small, complete examples for the Paginary editor. Each example is a standalone p
 
 ## Run an example
 
-Copy an example folder, change into it, install its dependencies, and run its tests. The example installs once `@paginary/core` is published on npm.
+Copy an example folder, change into it, install its dependencies, and run its tests. For a package example, build it, install Playwright's browser once, run its browser test, and pack it before publishing. The example installs once `@paginary/core` is published on npm.
 
 ```sh
 cp -r extension/callout my-callout

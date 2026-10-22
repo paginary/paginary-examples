@@ -24,6 +24,8 @@ editor.editor.update(() => {
 });
 
 const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+// The editor paints its layout in an animation frame; two frames let the update and render settle
+// without replacing the condition-based wait with a machine-dependent fixed delay.
 await nextFrame();
 await nextFrame();
 window.calloutReady = true;
