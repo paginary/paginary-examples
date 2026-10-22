@@ -28,7 +28,7 @@ import { DEFAULT_CALLOUT_INDENT_PX, CalloutFlattener, CalloutLayouter, CalloutRe
 // #region names
 export const TURN_INTO_CALLOUT = "example-turn-into-callout";
 export const SET_CALLOUT_VARIANT = "example-set-callout-variant";
-export const CALLOUT_SLICE = selectionSlice<{ readonly variant: string }>("callout");
+export const CALLOUT_SLICE = selectionSlice<{ readonly variant: string }>("example-callout");
 
 const DEFAULT_WARNING_VARIANT = {
   "--pg-callout-bg": "#fffbeb",

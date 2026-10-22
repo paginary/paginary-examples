@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { JSDOM } from "jsdom";
 import { createEditor, $createParagraphNode, $createRangeSelection, $createTextNode, $getRoot, $isElementNode, $setSelection } from "lexical";
 import { fillTemplate } from "@paginary/core/headless";
-import type { DocumentTheme, EditorContext } from "@paginary/core";
+import { Editor, type DocumentTheme, type EditorContext } from "@paginary/core";
 import {
   $createCalloutNode,
   $isCalloutNode,
@@ -124,7 +124,7 @@ test("turns a paragraph into a callout and sets a themed variant, while refusing
     assert.equal(callout.getVariant(), "themed");
   });
   assert.equal(extension.selectionSlice(ctx)?.variant, "themed");
-  assert.equal(CALLOUT_SLICE.extension, "callout");
+  assert.equal(CALLOUT_SLICE.extension, "example-callout");
   cleanup();
 });
 
@@ -178,4 +178,97 @@ test("headless filling reopens the callout document", () => {
   const result = fillTemplate({ extensions: [extension], document });
   assert.equal(result.ok, true);
   assert.deepEqual(result.report, { unresolved: [], invalid: [], findings: [] });
+});
+
+test("host selection reads the callout slice under the extension name", () => {
+  const dom = new JSDOM("<!doctype html><html><head></head><body></body></html>");
+  const runtime = globalThis as unknown as {
+    document?: Document;
+    window?: Window;
+    getComputedStyle?: typeof getComputedStyle;
+    HTMLElement?: typeof HTMLElement;
+    Node?: typeof Node;
+    Element?: typeof Element;
+    Text?: typeof Text;
+    ResizeObserver?: typeof ResizeObserver;
+    requestAnimationFrame?: typeof requestAnimationFrame;
+    cancelAnimationFrame?: typeof cancelAnimationFrame;
+  };
+  const previous = {
+    document: runtime.document,
+    window: runtime.window,
+    getComputedStyle: runtime.getComputedStyle,
+    HTMLElement: runtime.HTMLElement,
+    Node: runtime.Node,
+    Element: runtime.Element,
+    Text: runtime.Text,
+    ResizeObserver: runtime.ResizeObserver,
+    requestAnimationFrame: runtime.requestAnimationFrame,
+    cancelAnimationFrame: runtime.cancelAnimationFrame,
+  };
+  class TestResizeObserver {
+    observe(): void {}
+    disconnect(): void {}
+  }
+  runtime.document = dom.window.document;
+  runtime.window = dom.window as unknown as Window;
+  runtime.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
+  runtime.HTMLElement = dom.window.HTMLElement;
+  runtime.Node = dom.window.Node;
+  runtime.Element = dom.window.Element;
+  runtime.Text = dom.window.Text;
+  runtime.ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+  runtime.requestAnimationFrame = ((callback: FrameRequestCallback) => setTimeout(callback, 0)) as unknown as typeof requestAnimationFrame;
+  runtime.cancelAnimationFrame = ((handle: number) => clearTimeout(handle)) as unknown as typeof cancelAnimationFrame;
+  const canvasPrototype = dom.window.HTMLCanvasElement.prototype;
+  const previousGetContext = canvasPrototype.getContext;
+  canvasPrototype.getContext = (() => ({
+    font: "",
+    measureText: (text: string) => ({
+      width: text.length * 8,
+      fontBoundingBoxAscent: 8,
+      fontBoundingBoxDescent: 2,
+      actualBoundingBoxAscent: 8,
+      actualBoundingBoxDescent: 2,
+    }),
+  })) as unknown as typeof canvasPrototype.getContext;
+  try {
+    const host = dom.window.document.createElement("div");
+    dom.window.document.body.appendChild(host);
+    const editor = new Editor(host, { extensions: [new CalloutExtension()] });
+    editor.editor.update(() => {
+      const callout = $createCalloutNode("warning");
+      const text = $createTextNode("Read this warning");
+      callout.append(text);
+      $getRoot().clear().append(callout);
+      const selection = $createRangeSelection();
+      selection.anchor.set(text.getKey(), 0, "text");
+      selection.focus.set(text.getKey(), text.getTextContentSize(), "text");
+      $setSelection(selection);
+    }, { discrete: true });
+    assert.deepEqual(editor.selection.get(CALLOUT_SLICE), { variant: "warning" });
+    editor.destroy();
+  } finally {
+    canvasPrototype.getContext = previousGetContext;
+    if (previous.document === undefined) delete runtime.document;
+    else runtime.document = previous.document;
+    if (previous.window === undefined) delete runtime.window;
+    else runtime.window = previous.window;
+    if (previous.getComputedStyle === undefined) delete runtime.getComputedStyle;
+    else runtime.getComputedStyle = previous.getComputedStyle;
+    if (previous.HTMLElement === undefined) delete runtime.HTMLElement;
+    else runtime.HTMLElement = previous.HTMLElement;
+    if (previous.Node === undefined) delete runtime.Node;
+    else runtime.Node = previous.Node;
+    if (previous.Element === undefined) delete runtime.Element;
+    else runtime.Element = previous.Element;
+    if (previous.Text === undefined) delete runtime.Text;
+    else runtime.Text = previous.Text;
+    if (previous.ResizeObserver === undefined) delete runtime.ResizeObserver;
+    else runtime.ResizeObserver = previous.ResizeObserver;
+    if (previous.requestAnimationFrame === undefined) delete runtime.requestAnimationFrame;
+    else runtime.requestAnimationFrame = previous.requestAnimationFrame;
+    if (previous.cancelAnimationFrame === undefined) delete runtime.cancelAnimationFrame;
+    else runtime.cancelAnimationFrame = previous.cancelAnimationFrame;
+  }
 });
