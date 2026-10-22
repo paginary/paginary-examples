@@ -20,6 +20,7 @@ type FixtureNode = { readonly type: string; readonly text?: string; readonly chi
 
 type FixtureFile = { readonly document: { readonly root: { readonly children: readonly FixtureNode[] } } };
 
+// #region command-context
 const extensionContext = (
   editor: ReturnType<typeof createEditor>,
   notices: Array<Parameters<EditorContext["notify"]>[0]>,
@@ -29,11 +30,14 @@ const extensionContext = (
   documentTheme,
   notify: (notice: Parameters<EditorContext["notify"]>[0]) => notices.push(notice),
 } as unknown as EditorContext);
+// #endregion command-context
 
+// #region no-dom
 test("constructs without a DOM", () => {
   assert.equal("document" in globalThis, false);
   assert.ok(new CalloutExtension());
 });
+// #endregion no-dom
 
 test("warning exports a DOM element with its variant", () => {
   const dom = new JSDOM("<!doctype html><html><body></body></html>");
@@ -108,6 +112,7 @@ test("turns a paragraph into a callout and sets a themed variant, while refusing
     const child = callout.getFirstChild();
     if ($isElementNode(child)) child.select();
   }, { discrete: true });
+// #region run-command-and-refusal
   extension.commands()[SET_CALLOUT_VARIANT](ctx, "themed");
   editor.update(() => {}, { discrete: true });
   editor.getEditorState().read(() => {
@@ -123,6 +128,7 @@ test("turns a paragraph into a callout and sets a themed variant, while refusing
     assert.ok($isCalloutNode(callout));
     assert.equal(callout.getVariant(), "themed");
   });
+// #endregion run-command-and-refusal
   assert.equal(extension.selectionSlice(ctx)?.variant, "themed");
   assert.equal(CALLOUT_SLICE.extension, "example-callout");
   cleanup();
@@ -164,13 +170,16 @@ test("declares callout tokens, layout cost, role, and warning variant CSS", () =
   ]);
   assert.deepEqual(extension.themeRoles(), [{ name: "callout", namespace: "text", continuousSelector: ".pg-callout", default: {} }]);
   const css = extension.variantProjection(
+    // #region themed-theme
     { name: "warning", overrides: {}, variants: { callout: { warning: { "--pg-callout-bg": "#fed7aa" } } } },
+    // #endregion themed-theme
     "[data-pg-theme=\"test\"]",
   );
   assert.match(css, /\[data-callout-variant=\"warning\"\]/);
   assert.match(css, /--pg-callout-bg: #fed7aa/);
 });
 
+// #region headless-reopen
 test("headless filling reopens the callout document", () => {
   const extension = new CalloutExtension();
   assert.deepEqual(extension.capabilities().nodes?.[0]?.fields, ["variant"]);
@@ -179,6 +188,7 @@ test("headless filling reopens the callout document", () => {
   assert.equal(result.ok, true);
   assert.deepEqual(result.report, { unresolved: [], invalid: [], findings: [] });
 });
+// #endregion headless-reopen
 
 test("host selection reads the callout slice under the extension name", () => {
   const dom = new JSDOM("<!doctype html><html><head></head><body></body></html>");

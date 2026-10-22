@@ -44,6 +44,7 @@ export class CalloutNode extends ElementNode {
     return false;
   }
 
+  // #region accessors
   getVariant(): CalloutVariant {
     return this.getLatest().__variant;
   }
@@ -51,6 +52,7 @@ export class CalloutNode extends ElementNode {
   setVariant(variant: CalloutVariant): void {
     this.getWritable().__variant = variant;
   }
+  // #endregion accessors
 
   // #region json
   static importJSON(serialized: SerializedCalloutNode): CalloutNode {

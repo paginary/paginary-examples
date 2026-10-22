@@ -108,6 +108,7 @@ export class CalloutExtension extends EditorExtension {
         });
       },
       // #endregion add-commands
+      // #region set-variant
       [SET_CALLOUT_VARIANT]: (ctx: EditorContext, ...args: unknown[]) => {
         const requested = args[0];
         const commandContext = this.context ?? ctx;
@@ -128,14 +129,17 @@ export class CalloutExtension extends EditorExtension {
           if (callout) callout.setVariant(requested as CalloutVariant);
         });
       },
+      // #endregion set-variant
     };
   }
 
+// #region command-enabled
   commandEnabled(name: string, _selection: SelectionInfo, ctx: EditorContext): boolean {
     if (name === TURN_INTO_CALLOUT) return canTurnIntoBlock(ctx);
     if (name === SET_CALLOUT_VARIANT) return ctx.editor.getEditorState().read(() => calloutFromSelection() !== null);
     return super.commandEnabled(name, _selection, ctx);
   }
+// #endregion command-enabled
 // #endregion commands
 
 // #region selection
@@ -172,6 +176,7 @@ export class CalloutExtension extends EditorExtension {
 // #endregion theme-callout
 // #endregion theming
 
+// #region styles
   styles(): string {
     return `
 .pg-callout-band { background: var(--pg-callout-bg, #eff6ff); box-sizing: border-box; }
@@ -179,4 +184,5 @@ export class CalloutExtension extends EditorExtension {
 .pg-callout-content { box-sizing: border-box; }
 `;
   }
+// #endregion styles
 }

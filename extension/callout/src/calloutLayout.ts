@@ -71,6 +71,7 @@ export class CalloutLayouter implements BlockLayouter {
     this.context = context;
   }
 
+// #region resume
   layout(block: BlockInput, cursor: RegionCursor): LayoutResult {
     return this.place(block as CalloutBlock, STREAM_START, cursor);
   }
@@ -79,7 +80,9 @@ export class CalloutLayouter implements BlockLayouter {
     // The core keeps resume tokens opaque at this seam; this layouter created StreamCursor tokens, so the cast restores its own cursor shape.
     return this.place(block as CalloutBlock, token as StreamCursor, cursor);
   }
+// #endregion resume
 
+// #region open-region
   private place(callout: CalloutBlock, from: StreamCursor, cursor: RegionCursor): LayoutResult {
     const indent = calloutIndent(this.context, callout.variant);
     const region = cursor.open({
@@ -98,15 +101,18 @@ export class CalloutLayouter implements BlockLayouter {
     });
     return region.fill(callout.blocks, from);
   }
+// #endregion open-region
 }
 // #endregion layouter
 
 // #region renderer
 /** Paints the callout band and rail below selection, then fills text above it. */
 export class CalloutRenderer implements RegionRenderer {
+// #region claims
   claims(region: Region): boolean {
     return region.role === "callout";
   }
+// #endregion claims
 
   render(
     region: Region,
@@ -143,6 +149,7 @@ export class CalloutRenderer implements RegionRenderer {
     ctx.chrome.appendChild(rail);
     // #endregion paint-band-rail
 
+    // #region paint-text
     // The content wrapper belongs to the host layer above chrome, so the editor can keep text selection and caret painting interactive.
     const content = document.createElement("div");
     content.className = "pg-callout-content";
@@ -155,6 +162,7 @@ export class CalloutRenderer implements RegionRenderer {
     host.appendChild(content);
     ctx.fill(region, content, regionX, regionY);
     return content;
+    // #endregion paint-text
   }
 }
 // #endregion renderer
