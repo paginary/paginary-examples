@@ -7,8 +7,10 @@ import { fillTemplate } from "@paginary/core/headless";
 import { WidgetHarness } from "@paginary/core/testing";
 import { counterWidget, CounterWidgetExtension, INSERT_COUNTER } from "../src/counterWidget.ts";
 
+// #region jsdom-setup
 // The one page setup block an author needs for Node mount tests.
 const document = new JSDOM("<!doctype html><html><body></body></html>").window.document;
+// #endregion jsdom-setup
 
 const harness = (): WidgetHarness => new WidgetHarness({ widget: counterWidget });
 
