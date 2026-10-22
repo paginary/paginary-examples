@@ -65,7 +65,8 @@ class ExampleCheck {
       try {
         writeFileSync(join(consumerRoot, "package.json"), JSON.stringify({ private: true, type: "module" }, null, 2));
         const peers = Object.entries(packageJson.peerDependencies ?? {}).map(([name, version]) => `${name}@${version}`);
-        this.runTool(consumerRoot, "consumer install", executable("npm"), ["install", "--no-package-lock", "--ignore-scripts", archivePath, this.coreArchive, ...peers]);
+        const tools = packageJson.devDependencies?.typescript ? [`typescript@${packageJson.devDependencies.typescript}`] : [];
+        this.runTool(consumerRoot, "consumer install", executable("npm"), ["install", "--no-package-lock", "--ignore-scripts", archivePath, this.coreArchive, ...peers, ...tools]);
         this.checkLexical(consumerRoot);
         writeFileSync(join(consumerRoot, "consumer.mjs"), 'import { CalloutExtension } from "paginary-example-callout";\nif (!(new CalloutExtension() instanceof CalloutExtension)) throw new Error("CalloutExtension was not constructed");\n');
         this.runTool(consumerRoot, "consumer import", executable("node"), ["consumer.mjs"]);

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // #region count-bands
 test("draws callout bands and preserves their variants across pages", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("http://localhost:5179/");
   await page.waitForFunction(() => window.calloutReady === true);
 
   const pages = page.locator(".pg-page");
@@ -16,7 +16,7 @@ test("draws callout bands and preserves their variants across pages", async ({ p
 
 // #region join-text
   const segments = await page.locator(".pg-callout-content .pg-seg").allTextContents();
-  const numbers = Array.from(segments.join("").matchAll(/Sentence (\d+) of the note\./g), (match) => Number(match[1]));
+  const numbers = Array.from(segments.join("").matchAll(/Sentence\s*(\d+)\s*of\s*the\s*note\s*\./g), (match) => Number(match[1]));
   expect(numbers).toEqual(Array.from({ length: 150 }, (_, index) => index + 1));
 // #endregion join-text
 });

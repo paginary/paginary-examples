@@ -4,5 +4,6 @@ import { defineConfig } from "vite";
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   server: { port: 5179, strictPort: true },
+  resolve: { conditions: ["import", "module", "browser", "default"] },
   optimizeDeps: { include: ["lexical", "@lexical/selection", "@paginary/core"] },
 });
