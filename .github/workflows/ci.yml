@@ -1,0 +1,98 @@
+name: CI
+
+# The examples are public, so the text check runs for every pull request.
+# The core-backed job is withheld from fork pull requests because their code must not receive a secret.
+# pull_request_target is never used: it would give a fork's code access to the token.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  text:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for the commit range)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check public files
+        run: npm run check:text
+
+      - name: Test public-text checker
+        run: node --test scripts/check-public-text.test.mjs
+
+      - name: Check public commit messages
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.event.after }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE:-}" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            node scripts/check-public-text.mjs --commits --all
+          else
+            node scripts/check-public-text.mjs --commits "$BASE..$HEAD"
+          fi
+
+  examples:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout examples
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout core
+        uses: actions/checkout@v4
+        with:
+          repository: paginary/internal-core
+          token: ${{ secrets.PAGINARY_CI_TOKEN }}
+          persist-credentials: false
+          path: core
+
+      - name: Checkout test harness
+        uses: actions/checkout@v4
+        with:
+          repository: paginary/internal-test-harness
+          token: ${{ secrets.PAGINARY_CI_TOKEN }}
+          persist-credentials: false
+          path: internal-test-harness
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install the test harness
+        working-directory: internal-test-harness
+        run: npm ci
+
+      - name: Install core
+        working-directory: core
+        run: npm ci
+
+      - name: Build core's library
+        working-directory: core
+        run: npm run build:lib
+
+      - name: Install examples tools
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Install examples
+        run: npm ci
+
+      - name: Check examples
+        run: npm run test:examples -- --core core

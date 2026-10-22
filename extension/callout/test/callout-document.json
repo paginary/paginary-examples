@@ -1,0 +1,54 @@
+{
+  "format": "paginary.document",
+  "formatVersion": 1,
+  "document": {
+    "root": {
+      "type": "root",
+      "version": 1,
+      "format": "",
+      "indent": 0,
+      "direction": null,
+      "children": [
+        {
+          "type": "paragraph",
+          "version": 1,
+          "format": "",
+          "indent": 0,
+          "direction": null,
+          "textFormat": 0,
+          "textStyle": "",
+          "children": [
+            {
+              "type": "text",
+              "version": 1,
+              "text": "Before the callout",
+              "format": 0,
+              "detail": 0,
+              "mode": "normal",
+              "style": ""
+            }
+          ]
+        },
+        {
+          "type": "example-callout",
+          "version": 1,
+          "variant": "warning",
+          "format": "",
+          "indent": 0,
+          "direction": null,
+          "children": [
+            {
+              "type": "text",
+              "version": 1,
+              "text": "Read this warning",
+              "format": 0,
+              "detail": 0,
+              "mode": "normal",
+              "style": ""
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

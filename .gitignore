@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.tgz
+**/package-lock.json
+*.log
+# Scratch file for the signed-off commit message.
+commitmsg.txt
