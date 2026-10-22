@@ -79,6 +79,7 @@ export const counterWidget: WidgetDef = {
     drawCount(el, ctx.state);
 
     // #endregion mount-widget
+    // #region handle
     return {
       // Update redraws the existing interior when state or inputs change. Assigning next first makes a later
       // click use the fresh resolved input rather than the frozen context from mount.
@@ -94,6 +95,7 @@ export const counterWidget: WidgetDef = {
         el.replaceChildren();
       },
     };
+    // #endregion handle
   },
   // #endregion mount
 
@@ -127,6 +129,7 @@ export class CounterWidgetExtension extends EditorExtension {
 
   // #region commands
   commands(): Readonly<Record<string, EditorCommand>> {
+    // #region commands-short
     return {
       [INSERT_COUNTER]: (ctx: EditorContext) => {
         if (!ctx.selectAt(AT_CARET)) {
@@ -154,6 +157,7 @@ export class CounterWidgetExtension extends EditorExtension {
         });
       },
     };
+    // #endregion commands-short
   }
 
   commandEnabled(name: string, selection: SelectionInfo, ctx: EditorContext): boolean {
@@ -162,8 +166,10 @@ export class CounterWidgetExtension extends EditorExtension {
   }
   // #endregion commands
 
+  // #region widgets
   widgets(): readonly WidgetDef[] {
     return [counterWidget];
   }
+  // #endregion widgets
 }
 // #endregion extension
