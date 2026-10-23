@@ -111,6 +111,26 @@ test("migrate converts version one state to the current shape", () => {
 });
 // #endregion migrate-version-one
 
+test("declares its theme tokens and card styles", () => {
+  const extension = new CounterWidgetExtension();
+  assert.deepEqual(extension.themeTokens(), [
+    { name: "--pg-counter-bg", value: "#f8fafc", label: "Counter background" },
+    { name: "--pg-counter-border", value: "#cbd5e1", label: "Counter border" },
+    { name: "--pg-counter-accent", value: "#2563eb", label: "Counter accent" },
+    { name: "--pg-counter-accent-ink", value: "#ffffff", label: "Counter accent ink" },
+  ]);
+  const css = extension.styles();
+  for (const token of extension.themeTokens()) assert.match(css, new RegExp(`var\\(${token.name}\\)`));
+  assert.doesNotMatch(css, /#[0-9a-f]{3,8}/i);
+
+  const mounted = harness().mount({ count: 0 }, { document });
+  const card = mounted.element.querySelector(".pg-counter");
+  assert.ok(card);
+  assert.ok(card.querySelector(".pg-counter-count[data-counter-count]"));
+  assert.ok(card.querySelector(".pg-counter-button"));
+  mounted.unmount();
+});
+
 // #region mount-resolved-step
 test("mount uses a resolved step input", async () => {
   const mounted = harness().mount({ count: 0 }, { document, inputs: { step: 5 } });

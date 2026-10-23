@@ -1,5 +1,5 @@
 import { $getSelection, $insertNodes, $isRangeSelection } from "lexical";
-import { AT_CARET, EditorExtension, $createWidgetNode, type EditorContext, type EditorCommand, type SelectionInfo, type BakedForm, type BakeTarget, type WidgetContext, type WidgetDef, type WidgetState } from "@paginary/core";
+import { AT_CARET, EditorExtension, $createWidgetNode, type EditorContext, type EditorCommand, type SelectionInfo, type BakedForm, type BakeTarget, type ThemeTokenDef, type WidgetContext, type WidgetDef, type WidgetState } from "@paginary/core";
 
 const COUNTER_IMAGE = Uint8Array.from(
   atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="),
@@ -59,9 +59,13 @@ export const counterWidget: WidgetDef = {
   // #region mount-widget
   // Mount owns the initial DOM because the widget must render its count and action as one replaceable box.
   mount: (el, ctx) => {
+    const card = el.ownerDocument.createElement("div");
+    card.className = "pg-counter";
     const output = el.ownerDocument.createElement("output");
+    output.className = "pg-counter-count";
     output.dataset.counterCount = "";
     const button = el.ownerDocument.createElement("button");
+    button.className = "pg-counter-button";
     button.type = "button";
     button.textContent = buttonLabel(ctx);
 
@@ -75,7 +79,8 @@ export const counterWidget: WidgetDef = {
     button.disabled = ctx.readOnly;
     button.addEventListener("click", increment);
     // #endregion save-click
-    el.replaceChildren(output, button);
+    card.replaceChildren(output, button);
+    el.replaceChildren(card);
     drawCount(el, ctx.state);
 
     // #endregion mount-widget
@@ -173,5 +178,27 @@ export class CounterWidgetExtension extends EditorExtension {
     return [counterWidget];
   }
   // #endregion widgets
+
+  // #region look
+  themeTokens(): readonly ThemeTokenDef[] {
+    return [
+      { name: "--pg-counter-bg", value: "#f8fafc", label: "Counter background" },
+      { name: "--pg-counter-border", value: "#cbd5e1", label: "Counter border" },
+      { name: "--pg-counter-accent", value: "#2563eb", label: "Counter accent" },
+      { name: "--pg-counter-accent-ink", value: "#ffffff", label: "Counter accent ink" },
+    ];
+  }
+
+  styles(): string {
+    return `
+.pg-counter { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: var(--pg-counter-bg); border: 1px solid var(--pg-counter-border); border-radius: 8px; }
+.pg-counter-count { font: 600 22px/1 var(--pg-font-family); font-variant-numeric: tabular-nums; min-width: 2ch; color: var(--pg-ink); }
+.pg-counter-button { margin-left: auto; padding: 6px 12px; border: 0; border-radius: 6px; background: var(--pg-counter-accent); color: var(--pg-counter-accent-ink); font: 500 13px/1 var(--pg-font-family); cursor: pointer; }
+.pg-counter-button:hover { filter: brightness(1.08); }
+.pg-counter-button:focus-visible { outline: 2px solid var(--pg-counter-accent); outline-offset: 2px; }
+.pg-counter-button:disabled { opacity: .5; cursor: default; }
+`;
+  }
+  // #endregion look
 }
 // #endregion extension
