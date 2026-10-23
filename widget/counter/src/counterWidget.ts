@@ -1,5 +1,5 @@
 import { $getSelection, $insertNodes, $isRangeSelection } from "lexical";
-import { AT_CARET, EditorExtension, $createWidgetNode, type EditorContext, type EditorCommand, type SelectionInfo, type BakedForm, type BakeTarget, type ThemeTokenDef, type WidgetContext, type WidgetDef, type WidgetState } from "@paginary/core";
+import { AT_CARET, EditorExtension, FONT_FAMILY, $createWidgetNode, type EditorContext, type EditorCommand, type SelectionInfo, type BakedForm, type BakeTarget, type ThemeTokenDef, type WidgetContext, type WidgetDef, type WidgetState } from "@paginary/core";
 
 const COUNTER_IMAGE = Uint8Array.from(
   atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="),
@@ -38,7 +38,7 @@ export const counterWidget: WidgetDef = {
   type: "example.counter",
   version: 2,
   label: "Counter",
-  defaultSize: { width: 180, height: 64 },
+  defaultSize: { width: 140, height: 30 },
   exportForms: ["markup", "image"],
   inputs: { step: { kind: "number" } },
   outputs: { count: { kind: "number" } },
@@ -59,7 +59,7 @@ export const counterWidget: WidgetDef = {
   // #region mount-widget
   // Mount owns the initial DOM because the widget must render its count and action as one replaceable box.
   mount: (el, ctx) => {
-    const card = el.ownerDocument.createElement("div");
+    const card = el.ownerDocument.createElement("span");
     card.className = "pg-counter";
     const output = el.ownerDocument.createElement("output");
     output.className = "pg-counter-count";
@@ -116,7 +116,7 @@ export const counterWidget: WidgetDef = {
   bake: (state, _query, target: BakeTarget): BakedForm | null => {
     const count = countOf(state);
     if (target.forms.includes("markup")) {
-      return { form: "markup", html: `<output data-counter-count>${count}</output>` };
+      return { form: "markup", html: `<span class="pg-counter"><output class="pg-counter-count" data-counter-count>${count}</output></span>` };
     }
     if (target.forms.includes("image")) {
       return { form: "image", bytes: COUNTER_IMAGE, mediaType: "image/png", alt: `Counter showing ${count}` };
@@ -189,13 +189,14 @@ export class CounterWidgetExtension extends EditorExtension {
     ];
   }
 
+  // A default-theme document defines no tokens, so each fallback supplies the value that draws the card.
   styles(): string {
     return `
-.pg-counter { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: var(--pg-counter-bg); border: 1px solid var(--pg-counter-border); border-radius: 8px; }
-.pg-counter-count { font: 600 22px/1 var(--pg-font-family); font-variant-numeric: tabular-nums; min-width: 2ch; color: var(--pg-ink); }
-.pg-counter-button { margin-left: auto; padding: 6px 12px; border: 0; border-radius: 6px; background: var(--pg-counter-accent); color: var(--pg-counter-accent-ink); font: 500 13px/1 var(--pg-font-family); cursor: pointer; }
+.pg-counter { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; gap: 10px; padding: 0 3px 0 10px; background: var(--pg-counter-bg, #f8fafc); border: 1px solid var(--pg-counter-border, #cbd5e1); border-radius: 6px; }
+.pg-counter-count { font: 600 18px/1 var(--pg-font-family, ${FONT_FAMILY}); font-variant-numeric: tabular-nums; min-width: 2ch; color: var(--pg-ink, #1f2933); }
+.pg-counter-button { margin-left: auto; padding: 4px 10px; border: 0; border-radius: 4px; background: var(--pg-counter-accent, #2563eb); color: var(--pg-counter-accent-ink, #ffffff); font: 500 12px/1.2 var(--pg-font-family, ${FONT_FAMILY}); cursor: pointer; }
 .pg-counter-button:hover { filter: brightness(1.08); }
-.pg-counter-button:focus-visible { outline: 2px solid var(--pg-counter-accent); outline-offset: 2px; }
+.pg-counter-button:focus-visible { outline: 2px solid var(--pg-counter-accent, #2563eb); outline-offset: 2px; }
 .pg-counter-button:disabled { opacity: .5; cursor: default; }
 `;
   }
