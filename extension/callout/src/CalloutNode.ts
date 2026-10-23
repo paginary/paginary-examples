@@ -81,14 +81,14 @@ export class CalloutNode extends ElementNode {
   /**
    * Supply the same block insertion behavior used by the Enter command to Lexical's paragraph and paste paths.
    *
-   * A multiline paste calls this hook for each newline, so a normal callout receives line breaks rather than
-   * splitting into adjacent callouts. Boundary cases return the paragraph they create. An interior line break
-   * returns null to the paste path so its selection remains immediately after the inserted break.
+   * A multiline paste calls this hook for each newline. Paste creates an adjacent callout with the same appearance so
+   * Lexical can carry the trailing content after the caret in document order. Typed Enter keeps the caret in this
+   * callout and inserts a line break instead.
    */
   insertNewAfter(selection: RangeSelection, restoreSelection = true): CalloutNode | ParagraphNode | null {
     if (!selection.isCollapsed()) {
       selection.insertLineBreak(false);
-      return restoreSelection ? this : null;
+      return this;
     }
     if (this.isEmpty()) {
       const paragraph = this.createParagraph();
@@ -107,17 +107,32 @@ export class CalloutNode extends ElementNode {
     if (this.isAtStart(selection)) {
       const paragraph = this.createParagraph();
       this.insertBefore(paragraph, restoreSelection);
-      if (restoreSelection) paragraph.select();
+      if (!restoreSelection) {
+        paragraph.select();
+        return null;
+      }
+      paragraph.select();
       return paragraph;
     }
+    if (!restoreSelection) {
+      const callout = this.createCallout();
+      this.insertAfter(callout, false);
+      return callout;
+    }
     selection.insertLineBreak(false);
-    return restoreSelection ? this : null;
+    return this;
   }
 
   private createParagraph(): ParagraphNode {
     const paragraph = $createParagraphNode();
     copyCalloutAppearance(this, paragraph);
     return paragraph;
+  }
+
+  private createCallout(): CalloutNode {
+    const callout = $createCalloutNode(this.getVariant());
+    copyCalloutAppearance(this, callout);
+    return callout;
   }
 
   private isAtStart(selection: RangeSelection): boolean {

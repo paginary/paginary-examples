@@ -32,21 +32,30 @@ test("Enter inserts a warning line break inside the callout", async ({ page }) =
   expect(blocks[0]?.text).toContain("\nInserted ");
 });
 
-test("pasting multiline text keeps it in one warning callout", async ({ page, context }) => {
+test("pasting rich paragraphs keeps their order in adjacent callouts", async ({ page, context }) => {
   await page.goto("/");
   await page.waitForFunction(() => window.calloutReady === true);
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
 
   await clickCalloutText(page, "Warning:");
-  await page.keyboard.press("End");
-  await page.evaluate(() => navigator.clipboard.writeText("Pasted one\nPasted two"));
-  await page.keyboard.press("Control+V");
+  await page.keyboard.press("Home");
+  for (let index = 0; index < 8; index += 1) await page.keyboard.press("ArrowRight");
+  await page.evaluate(async () => {
+    const item = new ClipboardItem({
+      "text/html": new Blob(["<p>One</p><p>Two</p>"], { type: "text/html" }),
+      "text/plain": new Blob(["One\nTwo"], { type: "text/plain" }),
+    });
+    await navigator.clipboard.write([item]);
+  });
+  await page.keyboard.press("ControlOrMeta+V");
 
-  await expect.poll(async () => (await modelBlocks(page)).length).toBe(2);
+  await expect.poll(async () => (await modelBlocks(page)).length).toBeGreaterThan(2);
   const blocks = await modelBlocks(page);
-  expect(blocks[0]?.type).toBe("example-callout");
-  expect(blocks[0]?.variant).toBe("warning");
-  expect(blocks[0]?.text).toContain("Pasted one\nPasted two");
+  const text = blocks.map(({ text: blockText }) => blockText).join("\n");
+  expect(blocks.filter(({ type }) => type === "example-callout").length).toBeGreaterThan(1);
+  expect(text.indexOf("Warning:")).toBeLessThan(text.indexOf("One"));
+  expect(text.indexOf("One")).toBeLessThan(text.indexOf("Two"));
+  expect(text.indexOf("Two")).toBeLessThan(text.indexOf("check the package"));
 });
 
 test("Enter on an empty last line leaves the callout and starts a paragraph", async ({ page }) => {
