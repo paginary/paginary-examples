@@ -73,7 +73,6 @@ export class CalloutExtension extends EditorExtension {
   }
 // #endregion class
 
-// #region lifecycle
 // #region register-extension
   register(editor: LexicalEditor, ctx: EditorContext): () => void {
     const removeEnterHandler = editor.registerCommand(
@@ -98,7 +97,6 @@ export class CalloutExtension extends EditorExtension {
     };
   }
 // #endregion register-extension
-// #endregion lifecycle
 
 // #region capabilities
   capabilities(): CapabilityDeclaration {
@@ -106,7 +104,6 @@ export class CalloutExtension extends EditorExtension {
   }
 // #endregion capabilities
 
-// #region commands
   commands(): Readonly<Record<string, EditorCommand>> {
     return {
       // #region add-commands
@@ -157,7 +154,6 @@ export class CalloutExtension extends EditorExtension {
     return super.commandEnabled(name, _selection, ctx);
   }
 // #endregion command-enabled
-// #endregion commands
 
 // #region selection
   selectionSlice(ctx: EditorContext): { readonly variant: string } | undefined {

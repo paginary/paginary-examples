@@ -35,7 +35,6 @@ export function calloutIndent(context: EditorContext | null, variant: CalloutVar
 }
 // #endregion indent
 
-// #region flattener
 // #region flow-text
 /** Turns a callout node's direct inline text into one container block so shared paragraph pagination carries across pages. */
 export class CalloutFlattener implements BlockFlattener {
@@ -58,9 +57,7 @@ export class CalloutFlattener implements BlockFlattener {
   }
 }
 // #endregion flow-text
-// #endregion flattener
 
-// #region layouter
 /** Flows callout inline text through one indented region per page. */
 export class CalloutLayouter implements BlockLayouter {
   readonly type = CALLOUT_BLOCK;
@@ -103,9 +100,7 @@ export class CalloutLayouter implements BlockLayouter {
   }
 // #endregion open-region
 }
-// #endregion layouter
 
-// #region renderer
 /** Paints the callout band and rail below selection, then fills text above it. */
 export class CalloutRenderer implements RegionRenderer {
 // #region claims
@@ -165,4 +160,3 @@ export class CalloutRenderer implements RegionRenderer {
     // #endregion paint-text
   }
 }
-// #endregion renderer
