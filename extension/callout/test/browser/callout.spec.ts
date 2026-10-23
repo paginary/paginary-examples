@@ -15,6 +15,16 @@ async function clickCalloutText(page: Page, needle: string, calloutIndex = 0): P
 const modelBlocks = (page: Page): Promise<CalloutBlock[]> =>
   page.evaluate(() => window.calloutBlocks?.() ?? []);
 
+async function writeRichParagraphs(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const item = new ClipboardItem({
+      "text/html": new Blob(["<p>One</p><p>Two</p>"], { type: "text/html" }),
+      "text/plain": new Blob(["One\nTwo"], { type: "text/plain" }),
+    });
+    await navigator.clipboard.write([item]);
+  });
+}
+
 test("Enter inserts a warning line break inside the callout", async ({ page }) => {
   await page.goto("/");
   await page.waitForFunction(() => window.calloutReady === true);
@@ -32,7 +42,7 @@ test("Enter inserts a warning line break inside the callout", async ({ page }) =
   expect(blocks[0]?.text).toContain("\nInserted ");
 });
 
-test("pasting rich paragraphs keeps their order in adjacent callouts", async ({ page, context }) => {
+test("pasting rich paragraphs keeps order and puts remaining callout text after the last line", async ({ page, context }) => {
   await page.goto("/");
   await page.waitForFunction(() => window.calloutReady === true);
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
@@ -40,22 +50,33 @@ test("pasting rich paragraphs keeps their order in adjacent callouts", async ({ 
   await clickCalloutText(page, "Warning:");
   await page.keyboard.press("Home");
   for (let index = 0; index < 8; index += 1) await page.keyboard.press("ArrowRight");
-  await page.evaluate(async () => {
-    const item = new ClipboardItem({
-      "text/html": new Blob(["<p>One</p><p>Two</p>"], { type: "text/html" }),
-      "text/plain": new Blob(["One\nTwo"], { type: "text/plain" }),
-    });
-    await navigator.clipboard.write([item]);
-  });
+  await writeRichParagraphs(page);
   await page.keyboard.press("ControlOrMeta+V");
 
-  await expect.poll(async () => (await modelBlocks(page)).length).toBeGreaterThan(2);
+  await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);
   const blocks = await modelBlocks(page);
-  const text = blocks.map(({ text: blockText }) => blockText).join("\n");
-  expect(blocks.filter(({ type }) => type === "example-callout").length).toBeGreaterThan(1);
-  expect(text.indexOf("Warning:")).toBeLessThan(text.indexOf("One"));
-  expect(text.indexOf("One")).toBeLessThan(text.indexOf("Two"));
-  expect(text.indexOf("Two")).toBeLessThan(text.indexOf("check the package"));
+  expect(blocks.map(({ type }) => type)).toEqual(["example-callout", "paragraph", "example-callout"]);
+  expect(blocks[0]?.variant).toBe("warning");
+  expect(blocks[0]?.text).toBe("Warning:One");
+  expect(blocks[1]?.text).toBe("Two check the package before publishing.");
+});
+
+test("pasting rich paragraphs at the callout start keeps order", async ({ page, context }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.calloutReady === true);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+
+  await clickCalloutText(page, "Warning:");
+  await page.keyboard.press("Home");
+  await writeRichParagraphs(page);
+  await page.keyboard.press("ControlOrMeta+V");
+
+  await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);
+  const blocks = await modelBlocks(page);
+  expect(blocks.map(({ type }) => type)).toEqual(["example-callout", "paragraph", "example-callout"]);
+  expect(blocks[0]?.variant).toBe("warning");
+  expect(blocks[0]?.text).toBe("One");
+  expect(blocks[1]?.text).toBe("TwoWarning: check the package before publishing.");
 });
 
 test("Enter on an empty last line leaves the callout and starts a paragraph", async ({ page }) => {

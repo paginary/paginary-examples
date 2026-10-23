@@ -104,23 +104,31 @@ export class CalloutNode extends ElementNode {
       if (restoreSelection) paragraph.select();
       return paragraph;
     }
-    if (this.isAtStart(selection)) {
-      const paragraph = this.createParagraph();
-      this.insertBefore(paragraph, restoreSelection);
-      if (!restoreSelection) {
-        paragraph.select();
-        return null;
-      }
-      paragraph.select();
-      return paragraph;
+    if (!restoreSelection && this.isAtStart(selection)) {
+      const trailingCallout = this.createCallout();
+      trailingCallout.append(...this.getChildren());
+      this.clear();
+      this.insertAfter(trailingCallout, false);
+      return trailingCallout;
     }
     if (!restoreSelection) {
       const callout = this.createCallout();
       this.insertAfter(callout, false);
       return callout;
     }
+    if (this.isAtStart(selection)) {
+      const paragraph = this.createParagraph();
+      this.insertBefore(paragraph, true);
+      paragraph.select();
+      return paragraph;
+    }
     selection.insertLineBreak(false);
     return this;
+  }
+
+  /** Allow block-level paste to place its first paragraph inside an empty callout. */
+  canMergeWhenEmpty(): boolean {
+    return true;
   }
 
   private createParagraph(): ParagraphNode {
