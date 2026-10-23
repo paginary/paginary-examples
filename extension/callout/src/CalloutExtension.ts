@@ -42,7 +42,9 @@ const DEFAULT_WARNING_VARIANT = {
 function calloutFromSelection(): CalloutNode | null {
   const selection = $getSelection();
   if (!$isRangeSelection(selection)) return null;
-  return $findMatchingParent(selection.anchor.getNode(), $isCalloutNode) as CalloutNode | null;
+  const anchorCallout = $findMatchingParent(selection.anchor.getNode(), $isCalloutNode) as CalloutNode | null;
+  const focusCallout = $findMatchingParent(selection.focus.getNode(), $isCalloutNode) as CalloutNode | null;
+  return anchorCallout !== null && focusCallout?.getKey() === anchorCallout.getKey() ? anchorCallout : null;
 }
 
 // #region class

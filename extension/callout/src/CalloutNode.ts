@@ -74,60 +74,50 @@ export class CalloutNode extends ElementNode {
    * paragraph before it. An empty callout turns into a paragraph while carrying its block identity.
    */
   handleEnter(selection: RangeSelection): boolean {
-    if (!selection.isCollapsed()) {
-      selection.insertLineBreak(false);
-      return true;
-    }
-    if (this.isEmpty()) {
-      const paragraph = $createParagraphNode();
-      $carryBlockDataOnTurnInto(this, paragraph);
-      copyCalloutAppearance(this, paragraph);
-      this.replace(paragraph);
-      paragraph.select();
-      return true;
-    }
-    if (this.isEmptyLastLine(selection)) {
-      this.getLastChild()?.remove();
-      const paragraph = $createParagraphNode();
-      copyCalloutAppearance(this, paragraph);
-      this.insertAfter(paragraph);
-      paragraph.select();
-      return true;
-    }
-    if (this.isAtStart(selection)) {
-      const paragraph = $createParagraphNode();
-      copyCalloutAppearance(this, paragraph);
-      this.insertBefore(paragraph);
-      paragraph.select();
-      return true;
-    }
-    selection.insertLineBreak(false);
+    this.insertNewAfter(selection);
     return true;
   }
 
   /**
-   * Supply Lexical's block insertion fallback for callers that invoke `insertParagraph` directly.
+   * Supply the same block insertion behavior used by the Enter command to Lexical's paragraph and paste paths.
    *
-   * The editor's Enter command uses `handleEnter` so a normal Enter remains inside the callout. This hook still
-   * preserves the block's appearance and identity rules for Lexical operations that reach the element hook.
+   * A multiline paste calls this hook for each newline, so a normal callout receives line breaks rather than
+   * splitting into adjacent callouts. Boundary cases return the paragraph they create. An interior line break
+   * returns null to the paste path so its selection remains immediately after the inserted break.
    */
-  insertNewAfter(selection: RangeSelection, restoreSelection = true): CalloutNode | ParagraphNode {
-    const atStart = this.isAtStart(selection);
-    const atEnd = this.isAtEnd(selection);
-    const trailingLineBreak = this.getLastChild();
-    if (atEnd && $isLineBreakNode(trailingLineBreak)) trailingLineBreak.remove();
-
-    const newElement = atEnd ? $createParagraphNode() : $createCalloutNode(this.getVariant());
-    copyCalloutAppearance(this, newElement);
-    if (atStart && newElement instanceof CalloutNode) $carryBlockDataOnTurnInto(this, newElement);
-    this.insertAfter(newElement, restoreSelection);
-    if (atStart && !this.isEmpty()) {
-      const paragraph = $createParagraphNode();
-      copyCalloutAppearance(this, paragraph);
-      paragraph.select();
-      this.replace(paragraph, true);
+  insertNewAfter(selection: RangeSelection, restoreSelection = true): CalloutNode | ParagraphNode | null {
+    if (!selection.isCollapsed()) {
+      selection.insertLineBreak(false);
+      return restoreSelection ? this : null;
     }
-    return newElement;
+    if (this.isEmpty()) {
+      const paragraph = this.createParagraph();
+      $carryBlockDataOnTurnInto(this, paragraph);
+      this.replace(paragraph);
+      if (restoreSelection) paragraph.select();
+      return paragraph;
+    }
+    if (this.isEmptyLastLine(selection)) {
+      this.getLastChild()?.remove();
+      const paragraph = this.createParagraph();
+      this.insertAfter(paragraph, restoreSelection);
+      if (restoreSelection) paragraph.select();
+      return paragraph;
+    }
+    if (this.isAtStart(selection)) {
+      const paragraph = this.createParagraph();
+      this.insertBefore(paragraph, restoreSelection);
+      if (restoreSelection) paragraph.select();
+      return paragraph;
+    }
+    selection.insertLineBreak(false);
+    return restoreSelection ? this : null;
+  }
+
+  private createParagraph(): ParagraphNode {
+    const paragraph = $createParagraphNode();
+    copyCalloutAppearance(this, paragraph);
+    return paragraph;
   }
 
   private isAtStart(selection: RangeSelection): boolean {
@@ -135,13 +125,6 @@ export class CalloutNode extends ElementNode {
     if (point.type === "element") return point.key === this.getKey() && point.offset === 0;
     const firstDescendant = this.getFirstDescendant();
     return firstDescendant !== null && point.key === firstDescendant.getKey() && point.offset === 0;
-  }
-
-  private isAtEnd(selection: RangeSelection): boolean {
-    const point = selection.anchor;
-    if (point.type === "element") return point.key === this.getKey() && point.offset === this.getChildrenSize();
-    const lastDescendant = this.getLastDescendant();
-    return lastDescendant !== null && point.key === lastDescendant.getKey() && point.offset === lastDescendant.getTextContentSize();
   }
 
   private isEmptyLastLine(selection: RangeSelection): boolean {
