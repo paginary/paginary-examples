@@ -17,6 +17,8 @@ import {
   $findMatchingParent,
   $getSelection,
   $isRangeSelection,
+  COMMAND_PRIORITY_HIGH,
+  INSERT_PARAGRAPH_COMMAND,
   type Klass,
   type LexicalEditor,
   type LexicalNode,
@@ -40,7 +42,9 @@ const DEFAULT_WARNING_VARIANT = {
 function calloutFromSelection(): CalloutNode | null {
   const selection = $getSelection();
   if (!$isRangeSelection(selection)) return null;
-  return $findMatchingParent(selection.anchor.getNode(), $isCalloutNode) as CalloutNode | null;
+  const anchorCallout = $findMatchingParent(selection.anchor.getNode(), $isCalloutNode) as CalloutNode | null;
+  const focusCallout = $findMatchingParent(selection.focus.getNode(), $isCalloutNode) as CalloutNode | null;
+  return anchorCallout !== null && focusCallout?.getKey() === anchorCallout.getKey() ? anchorCallout : null;
 }
 
 // #region class
@@ -71,11 +75,23 @@ export class CalloutExtension extends EditorExtension {
 
 // #region lifecycle
 // #region register-extension
-  register(_editor: LexicalEditor, ctx: EditorContext): () => void {
+  register(editor: LexicalEditor, ctx: EditorContext): () => void {
+    const removeEnterHandler = editor.registerCommand(
+      INSERT_PARAGRAPH_COMMAND,
+      () => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return false;
+        const callout = calloutFromSelection();
+        return callout ? callout.handleEnter(selection) : false;
+      },
+      COMMAND_PRIORITY_HIGH,
+    );
+
     // Keep the active context on the extension so layout can read the document theme until cleanup.
     this.context = ctx;
     this.layouter.setContext(ctx);
     return () => {
+      removeEnterHandler();
       if (this.context !== ctx) return;
       this.context = null;
       this.layouter.setContext(null);

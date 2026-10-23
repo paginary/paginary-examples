@@ -24,5 +24,6 @@ Copy this folder to start your own extension. The example installs once `@pagina
 - `test/package-smoke.mjs`: a generic smoke test for the built package entry point.
 - `test/browser/index.html`: the page served by the browser fixture.
 - `test/browser/main.ts`: the browser fixture content and editor mount.
+- `test/browser/callout-window.ts`: the shared browser fixture window shape.
 - `test/browser/vite.config.ts`: the Vite server and dependency prebundling configuration.
 - `test/browser/callout.spec.ts`: the browser assertions for pagination, variants, and text.

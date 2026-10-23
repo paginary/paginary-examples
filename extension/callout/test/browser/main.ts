@@ -1,12 +1,7 @@
 import { $createTextNode, $getRoot } from "lexical";
 import { createCalloutEditor } from "../../example/editor.ts";
-import { $createCalloutNode } from "../../src/index.ts";
-
-declare global {
-  interface Window {
-    calloutReady?: boolean;
-  }
-}
+import { $createCalloutNode, $isCalloutNode } from "../../src/index.ts";
+import type { CalloutBlock } from "./callout-window.ts";
 
 // #region mount-editor
 const host = document.querySelector<HTMLElement>("#editor");
@@ -30,3 +25,11 @@ await nextFrame();
 await nextFrame();
 window.calloutReady = true;
 // #endregion mount-editor
+
+window.calloutBlocks = (): CalloutBlock[] => editor.editor.getEditorState().read(() =>
+  $getRoot().getChildren().map((node) => ({
+    type: node.getType(),
+    text: node.getTextContent(),
+    variant: $isCalloutNode(node) ? node.getVariant() : undefined,
+  })),
+);
