@@ -81,8 +81,8 @@ export class CalloutNode extends ElementNode {
    * Supply the same block insertion behavior used by the Enter command to Lexical's paragraph and paste paths.
    *
    * A multiline paste calls this hook for each newline. Rich paste merges the callout's remaining text into the last pasted
-   * paragraph, as a heading does, while keeping the pasted paragraphs in order. Typed Enter keeps the caret in this
-   * callout and inserts a line break instead.
+   * paragraph, as a heading does, while keeping the pasted paragraphs in order. Typed Enter follows the rules on
+   * `handleEnter` above instead.
    */
   insertNewAfter(selection: RangeSelection, restoreSelection = true): CalloutNode | ParagraphNode | null {
     if (!selection.isCollapsed()) {
