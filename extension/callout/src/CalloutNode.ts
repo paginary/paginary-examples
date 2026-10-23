@@ -1,10 +1,13 @@
 import {
+  $createParagraphNode,
   ElementNode,
   type DOMExportOutput,
   type EditorConfig,
   type LexicalEditor,
   type LexicalNode,
   type NodeKey,
+  type ParagraphNode,
+  type RangeSelection,
   type SerializedElementNode,
   type Spread,
 } from "lexical";
@@ -53,6 +56,30 @@ export class CalloutNode extends ElementNode {
     this.getWritable().__variant = variant;
   }
   // #endregion accessors
+
+  /**
+   * Insert the block that follows an Enter in this callout.
+   *
+   * Enter in the middle keeps the trailing text in a callout with the same variant. Enter at the end creates a
+   * plain paragraph after the callout, and Enter at the start creates one before it so adjacent callouts can be
+   * separated without deleting either block.
+   */
+  insertNewAfter(selection: RangeSelection, restoreSelection = true): CalloutNode | ParagraphNode {
+    const anchorOffset = selection.anchor.offset;
+    const lastDescendant = this.getLastDescendant();
+    const isAtEnd =
+      lastDescendant === null ||
+      (selection.anchor.key === lastDescendant.getKey() && anchorOffset === lastDescendant.getTextContentSize());
+    const newElement = isAtEnd ? $createParagraphNode() : $createCalloutNode(this.getVariant());
+    newElement.setDirection(this.getDirection());
+    this.insertAfter(newElement, restoreSelection);
+    if (anchorOffset === 0 && !this.isEmpty()) {
+      const paragraph = $createParagraphNode();
+      paragraph.select();
+      this.replace(paragraph, true);
+    }
+    return newElement;
+  }
 
   // #region json
   static importJSON(serialized: SerializedCalloutNode): CalloutNode {

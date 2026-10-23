@@ -1,4 +1,63 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+declare global {
+  interface Window {
+    calloutBlocks?: () => Array<{ type: string; text: string }>;
+  }
+}
+
+async function clickCalloutText(page: Page, needle: string, calloutIndex = 0): Promise<void> {
+  const content = page.locator(".pg-callout-content").nth(calloutIndex);
+  const segment = content.locator(".pg-seg").filter({ hasText: needle }).first();
+  await expect(segment).toBeVisible();
+  await segment.scrollIntoViewIfNeeded();
+  const box = await segment.boundingBox();
+  expect(box).not.toBeNull();
+  if (box === null) throw new Error(`No box for callout text ${JSON.stringify(needle)}`);
+  await page.mouse.click(box.x + 2, box.y + box.height / 2);
+}
+
+const modelBlocks = (page: Page): Promise<Array<{ type: string; text: string }>> =>
+  page.evaluate(() => window.calloutBlocks?.() ?? []);
+
+test("Enter splits callout text and leaves to a paragraph at the callout edge", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.calloutReady === true);
+
+  const original = "Warning: check the package before publishing.";
+  await clickCalloutText(page, "Warning:");
+  await page.keyboard.press("Home");
+  for (let index = 0; index < 8; index += 1) await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+
+  await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);
+  const split = await modelBlocks(page);
+  expect(split[0]?.type).toBe("example-callout");
+  expect(split[1]?.type).toBe("example-callout");
+  expect(`${split[0]?.text ?? ""}${split[1]?.text ?? ""}`).toBe(original);
+
+  await clickCalloutText(page, "package", 1);
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("After");
+
+  await expect.poll(async () => (await modelBlocks(page)).some(({ type, text }) => type === "paragraph" && text === "After")).toBe(true);
+});
+
+test("Enter at the end of an adjacent callout creates a paragraph between the callouts", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.calloutReady === true);
+
+  await clickCalloutText(page, "Warning:");
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("Between");
+
+  await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);
+  const blocks = await modelBlocks(page);
+  expect(blocks.map(({ type }) => type)).toEqual(["example-callout", "paragraph", "example-callout"]);
+  expect(blocks[1]?.text).toBe("Between");
+});
 
 test("draws callout bands and preserves their variants across pages", async ({ page }) => {
   await page.goto("/");

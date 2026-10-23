@@ -5,6 +5,7 @@ import { $createCalloutNode } from "../../src/index.ts";
 declare global {
   interface Window {
     calloutReady?: boolean;
+    calloutBlocks?: () => Array<{ type: string; text: string }>;
   }
 }
 
@@ -13,6 +14,10 @@ const host = document.querySelector<HTMLElement>("#editor");
 if (!host) throw new Error("The browser fixture has no editor host");
 
 const editor = createCalloutEditor(host);
+window.calloutBlocks = () => editor.editor.getEditorState().read(() =>
+  $getRoot().getChildren().map((node) => ({ type: node.getType(), text: node.getTextContent() })),
+);
+
 editor.editor.update(() => {
   const warning = $createCalloutNode("warning");
   warning.append($createTextNode("Warning: check the package before publishing."));
