@@ -91,7 +91,6 @@ test("bake returns markup without a warning", () => {
 });
 // #endregion bake-markup
 
-// #region bake-accessible-image
 test("bake returns an accessible image without a warning", () => {
   const result = harness().bake({ count: 4 }, { forms: ["image"] });
   assert.equal(result.form?.form, "image");
@@ -99,7 +98,6 @@ test("bake returns an accessible image without a warning", () => {
   assert.match(result.markup, /Counter showing 4/);
   assert.deepEqual(result.warnings, []);
 });
-// #endregion bake-accessible-image
 
 // #region migrate-version-one
 test("migrate converts version one state to the current shape", () => {
@@ -120,21 +118,28 @@ test("draws its card with every token's default as a fallback", () => {
     { name: "--pg-counter-accent-ink", value: "#ffffff", label: "Counter accent ink" },
   ]);
   const css = extension.styles();
-  for (const token of extension.themeTokens()) assert.ok(css.includes(`var(${token.name}, ${token.value})`));
-  for (const name of ["--pg-ink", "--pg-font-family"]) {
-    const token = coreTokens.find((candidate) => candidate.name === name);
+  const fallbacks = [...css.matchAll(/var\((--[\w-]+), ([^)]+)\)/g)];
+  const declaredTokens = [...extension.themeTokens(), ...coreTokens.filter(({ name }) => name === "--pg-ink" || name === "--pg-font-family")];
+  for (const [, name, fallback] of fallbacks) {
+    const token = declaredTokens.find((candidate) => candidate.name === name);
     assert.ok(token);
-    assert.ok(css.includes(`var(${token.name}, ${token.value})`));
+    assert.equal(fallback, token.value);
+  }
+  for (const token of declaredTokens) {
+    assert.ok(fallbacks.some(([, name, fallback]) => name === token.name && fallback === token.value));
   }
   assert.doesNotMatch(css, /var\(--[\w-]+\)/);
 
   const mounted = harness().mount({ count: 0 }, { document });
-  const card = mounted.element.querySelector(".pg-counter");
-  assert.ok(card);
-  assert.equal(card.querySelector(".pg-counter-count[data-counter-count]")?.textContent, "0");
-  assert.ok(card.querySelector(".pg-counter-button"));
-  assert.match(harness().bake({ count: 4 }, { forms: ["markup"] }).markup, /class="pg-counter"/);
-  mounted.unmount();
+  try {
+    const card = mounted.element.querySelector(".pg-counter");
+    assert.ok(card);
+    assert.equal(card.querySelector(".pg-counter-count[data-counter-count]")?.textContent, "0");
+    assert.ok(card.querySelector(".pg-counter-button"));
+  } finally {
+    mounted.unmount();
+  }
+  assert.match(harness().bake({ count: 4 }, { forms: ["markup"] }).markup, /<span class="pg-counter">/);
 });
 
 // #region mount-resolved-step
@@ -153,7 +158,6 @@ test("mount uses a resolved step input", async () => {
 });
 // #endregion mount-resolved-step
 
-// #region mount-defaults-to-one
 test("mount defaults to one when the step input is unwired", async () => {
   const mounted = harness().mount({ count: 0 }, { document });
   const output = mounted.element.querySelector<HTMLOutputElement>("[data-counter-count]");
@@ -166,7 +170,6 @@ test("mount defaults to one when the step input is unwired", async () => {
   assert.deepEqual(mounted.writes, [{ count: 1 }]);
   mounted.unmount();
 });
-// #endregion mount-defaults-to-one
 
 // #region mount-click-state
 test("mount redraws after a click and records the state write", async () => {
@@ -189,7 +192,6 @@ test("mount redraws after a click and records the state write", async () => {
 });
 // #endregion mount-click-state
 
-// #region mount-read-only
 test("mount disables the button in read-only mode", () => {
   const mounted = harness().mount({ count: 0 }, { document, readOnly: true });
   const button = mounted.element.querySelector<HTMLButtonElement>("button");
@@ -197,9 +199,7 @@ test("mount disables the button in read-only mode", () => {
   assert.equal(button.disabled, true);
   mounted.unmount();
 });
-// #endregion mount-read-only
 
-// #region render-error
 test("renderError explains a failed live render", () => {
   const failingWidget = {
     ...counterWidget,
@@ -211,15 +211,12 @@ test("renderError explains a failed live render", () => {
   assert.equal(mounted.element.textContent, "Counter failed to render: test failure");
   mounted.unmount();
 });
-// #endregion render-error
 
-// #region unmount-interior
 test("unmount removes the widget interior", () => {
   const mounted = harness().mount({ count: 0 }, { document });
   mounted.unmount();
   assert.equal(mounted.element.childElementCount, 0);
 });
-// #endregion unmount-interior
 
 // #region fill-template
 test("a document holding a counter opens through fillTemplate", () => {

@@ -24,7 +24,6 @@ function copyCalloutAppearance(source: CalloutNode, destination: ElementNode): v
   destination.setStyle(source.getStyle());
 }
 
-// #region node
 // #region store-variant
 /** A block container whose inline text is rendered as a themed callout so the variant travels with the content. */
 export class CalloutNode extends ElementNode {
@@ -81,8 +80,8 @@ export class CalloutNode extends ElementNode {
   /**
    * Supply the same block insertion behavior used by the Enter command to Lexical's paragraph and paste paths.
    *
-   * A multiline paste calls this hook for each newline. Paste creates an adjacent callout with the same appearance so
-   * Lexical can carry the trailing content after the caret in document order. Typed Enter keeps the caret in this
+   * A multiline paste calls this hook for each newline. Rich paste merges the callout's remaining text into the last pasted
+   * paragraph, as a heading does, while keeping the pasted paragraphs in order. Typed Enter keeps the caret in this
    * callout and inserts a line break instead.
    */
   insertNewAfter(selection: RangeSelection, restoreSelection = true): CalloutNode | ParagraphNode | null {
@@ -174,7 +173,6 @@ export class CalloutNode extends ElementNode {
     return output;
   }
 }
-// #endregion node
 
 /** Create a callout node with the note variant unless a variant is supplied. */
 export function $createCalloutNode(variant: CalloutVariant = "note"): CalloutNode {

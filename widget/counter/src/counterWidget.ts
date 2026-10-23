@@ -33,7 +33,6 @@ export const INSERT_COUNTER = "example-insert-counter";
 
 /** The smallest complete widget: state, migration, inputs, live rendering, static export, and insertion. */
 export const counterWidget: WidgetDef = {
-  // #region declaration
   // #region declare-widget
   type: "example.counter",
   version: 2,
@@ -43,7 +42,6 @@ export const counterWidget: WidgetDef = {
   inputs: { step: { kind: "number" } },
   outputs: { count: { kind: "number" } },
   // #endregion declare-widget
-  // #endregion declaration
 
   // #region migrate
   // Migration changes old persisted state into the current state shape without writing the document.
@@ -55,7 +53,6 @@ export const counterWidget: WidgetDef = {
   derive: (state) => ({ count: countOf(state) }),
   // #endregion derive
 
-  // #region mount
   // #region mount-widget
   // Mount owns the initial DOM because the widget must render its count and action as one replaceable box.
   mount: (el, ctx) => {
@@ -69,7 +66,6 @@ export const counterWidget: WidgetDef = {
     button.type = "button";
     button.textContent = buttonLabel(ctx);
 
-    // #region save-click
     // Each lifecycle call gets a fresh, frozen context, so the handler must keep the latest one.
     let current = ctx;
     const increment = (): void => {
@@ -78,7 +74,6 @@ export const counterWidget: WidgetDef = {
     };
     button.disabled = ctx.readOnly;
     button.addEventListener("click", increment);
-    // #endregion save-click
     card.replaceChildren(output, button);
     el.replaceChildren(card);
     drawCount(el, ctx.state);
@@ -102,7 +97,6 @@ export const counterWidget: WidgetDef = {
     };
     // #endregion handle
   },
-  // #endregion mount
 
   // Render errors stay inside the widget box and explain why its live view is unavailable.
   renderError: (el, error) => {
@@ -111,7 +105,6 @@ export const counterWidget: WidgetDef = {
   },
 
   // #region bake
-  // #region test-widget
   // Bake is DOM-free so tests can verify the widget's export without mounting a browser surface.
   bake: (state, _query, target: BakeTarget): BakedForm | null => {
     const count = countOf(state);
@@ -123,16 +116,13 @@ export const counterWidget: WidgetDef = {
     }
     return null;
   },
-  // #endregion test-widget
   // #endregion bake
 };
 
-// #region extension
 /** Register the counter with an editor by adding this extension to its extension list. */
 export class CounterWidgetExtension extends EditorExtension {
   readonly name = "example-counter";
 
-  // #region commands
   commands(): Readonly<Record<string, EditorCommand>> {
     // #region commands-short
     return {
@@ -171,7 +161,6 @@ export class CounterWidgetExtension extends EditorExtension {
     return selection.kind === "caret" || selection.kind === "range";
   }
   // #endregion command-enabled
-  // #endregion commands
 
   // #region widgets
   widgets(): readonly WidgetDef[] {
@@ -189,7 +178,7 @@ export class CounterWidgetExtension extends EditorExtension {
     ];
   }
 
-  // A default-theme document defines no tokens, so each fallback supplies the value that draws the card.
+  // A document may not define these tokens, so each fallback supplies the value that draws the card.
   styles(): string {
     return `
 .pg-counter { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; gap: 10px; padding: 0 3px 0 10px; background: var(--pg-counter-bg, #f8fafc); border: 1px solid var(--pg-counter-border, #cbd5e1); border-radius: 6px; }
@@ -202,4 +191,3 @@ export class CounterWidgetExtension extends EditorExtension {
   }
   // #endregion look
 }
-// #endregion extension
