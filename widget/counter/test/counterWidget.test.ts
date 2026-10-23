@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { JSDOM } from "jsdom";
 import { createEditor, $createParagraphNode, $createTextNode, $getRoot, $isElementNode } from "lexical";
-import { $createWidgetNode, $isWidgetNode, WidgetNode, type EditorContext, type SelectionInfo } from "@paginary/core";
+import { $createWidgetNode, $isWidgetNode, WidgetNode, coreTokens, type EditorContext, type SelectionInfo } from "@paginary/core";
 import { fillTemplate } from "@paginary/core/headless";
 import { WidgetHarness } from "@paginary/core/testing";
 import { counterWidget, CounterWidgetExtension, INSERT_COUNTER } from "../src/counterWidget.ts";
@@ -111,7 +111,7 @@ test("migrate converts version one state to the current shape", () => {
 });
 // #endregion migrate-version-one
 
-test("declares its theme tokens and card styles", () => {
+test("draws its card with every token's default as a fallback", () => {
   const extension = new CounterWidgetExtension();
   assert.deepEqual(extension.themeTokens(), [
     { name: "--pg-counter-bg", value: "#f8fafc", label: "Counter background" },
@@ -120,14 +120,20 @@ test("declares its theme tokens and card styles", () => {
     { name: "--pg-counter-accent-ink", value: "#ffffff", label: "Counter accent ink" },
   ]);
   const css = extension.styles();
-  for (const token of extension.themeTokens()) assert.match(css, new RegExp(`var\\(${token.name}\\)`));
-  assert.doesNotMatch(css, /#[0-9a-f]{3,8}/i);
+  for (const token of extension.themeTokens()) assert.ok(css.includes(`var(${token.name}, ${token.value})`));
+  for (const name of ["--pg-ink", "--pg-font-family"]) {
+    const token = coreTokens.find((candidate) => candidate.name === name);
+    assert.ok(token);
+    assert.ok(css.includes(`var(${token.name}, ${token.value})`));
+  }
+  assert.doesNotMatch(css, /var\(--[\w-]+\)/);
 
   const mounted = harness().mount({ count: 0 }, { document });
   const card = mounted.element.querySelector(".pg-counter");
   assert.ok(card);
-  assert.ok(card.querySelector(".pg-counter-count[data-counter-count]"));
+  assert.equal(card.querySelector(".pg-counter-count[data-counter-count]")?.textContent, "0");
   assert.ok(card.querySelector(".pg-counter-button"));
+  assert.match(harness().bake({ count: 4 }, { forms: ["markup"] }).markup, /class="pg-counter"/);
   mounted.unmount();
 });
 
@@ -220,7 +226,7 @@ test("a document holding a counter opens through fillTemplate", () => {
   const editor = createEditor({ namespace: "counter-template", nodes: [WidgetNode], onError: (error: unknown) => { throw error; } });
   editor.update(() => {
     const paragraph = $createParagraphNode().append($createTextNode("Counter:"));
-    paragraph.append($createWidgetNode("example.counter", 2, 180, 64));
+    paragraph.append($createWidgetNode("example.counter", 2, 140, 30));
     $getRoot().clear().append(paragraph);
   }, { discrete: true });
   const documentFile = {
