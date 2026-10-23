@@ -1,22 +1,19 @@
 import { $createTextNode, $getRoot } from "lexical";
 import { createCalloutEditor } from "../../example/editor.ts";
-import { $createCalloutNode } from "../../src/index.ts";
+import { $createCalloutNode, $isCalloutNode } from "../../src/index.ts";
 
-declare global {
-  interface Window {
-    calloutReady?: boolean;
-    calloutBlocks?: () => Array<{ type: string; text: string }>;
-  }
-}
+type CalloutTestWindow = Window & {
+  calloutReady?: boolean;
+  calloutBlocks?: () => Array<{ type: string; text: string; variant?: string }>;
+};
+
+const testWindow = window as CalloutTestWindow;
 
 // #region mount-editor
 const host = document.querySelector<HTMLElement>("#editor");
 if (!host) throw new Error("The browser fixture has no editor host");
 
 const editor = createCalloutEditor(host);
-window.calloutBlocks = () => editor.editor.getEditorState().read(() =>
-  $getRoot().getChildren().map((node) => ({ type: node.getType(), text: node.getTextContent() })),
-);
 
 editor.editor.update(() => {
   const warning = $createCalloutNode("warning");
@@ -33,5 +30,14 @@ const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimation
 // without replacing the condition-based wait with a machine-dependent fixed delay.
 await nextFrame();
 await nextFrame();
-window.calloutReady = true;
+testWindow.calloutReady = true;
 // #endregion mount-editor
+
+// Test-only model seam, kept outside the quoted mount-editor region.
+testWindow.calloutBlocks = () => editor.editor.getEditorState().read(() =>
+  $getRoot().getChildren().map((node) => ({
+    type: node.getType(),
+    text: node.getTextContent(),
+    variant: $isCalloutNode(node) ? node.getVariant() : undefined,
+  })),
+);

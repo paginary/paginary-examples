@@ -1,5 +1,6 @@
 import {
   $createParagraphNode,
+  $isLineBreakNode,
   ElementNode,
   type DOMExportOutput,
   type EditorConfig,
@@ -11,9 +12,17 @@ import {
   type SerializedElementNode,
   type Spread,
 } from "lexical";
+import { $copyBlockFormatIndent } from "@lexical/selection";
+import { $carryBlockDataOnTurnInto } from "@paginary/core";
 
 export type CalloutVariant = "note" | "warning" | (string & {});
 export type SerializedCalloutNode = Spread<{ variant: CalloutVariant }, SerializedElementNode>;
+
+function copyCalloutAppearance(source: CalloutNode, destination: ElementNode): void {
+  $copyBlockFormatIndent(source, destination);
+  destination.setDirection(source.getDirection());
+  destination.setStyle(source.getStyle());
+}
 
 // #region node
 // #region store-variant
@@ -58,27 +67,86 @@ export class CalloutNode extends ElementNode {
   // #endregion accessors
 
   /**
-   * Insert the block that follows an Enter in this callout.
+   * Apply the callout's Enter behavior to a collapsed or ranged selection.
    *
-   * Enter in the middle keeps the trailing text in a callout with the same variant. Enter at the end creates a
-   * plain paragraph after the callout, and Enter at the start creates one before it so adjacent callouts can be
-   * separated without deleting either block.
+   * Enter inserts a line-break child inside a non-empty callout. A second Enter on the resulting empty last line
+   * removes that line and inserts a normal paragraph after the callout. Enter at the callout start inserts a
+   * paragraph before it. An empty callout turns into a paragraph while carrying its block identity.
+   */
+  handleEnter(selection: RangeSelection): boolean {
+    if (!selection.isCollapsed()) {
+      selection.insertLineBreak(false);
+      return true;
+    }
+    if (this.isEmpty()) {
+      const paragraph = $createParagraphNode();
+      $carryBlockDataOnTurnInto(this, paragraph);
+      copyCalloutAppearance(this, paragraph);
+      this.replace(paragraph);
+      paragraph.select();
+      return true;
+    }
+    if (this.isEmptyLastLine(selection)) {
+      this.getLastChild()?.remove();
+      const paragraph = $createParagraphNode();
+      copyCalloutAppearance(this, paragraph);
+      this.insertAfter(paragraph);
+      paragraph.select();
+      return true;
+    }
+    if (this.isAtStart(selection)) {
+      const paragraph = $createParagraphNode();
+      copyCalloutAppearance(this, paragraph);
+      this.insertBefore(paragraph);
+      paragraph.select();
+      return true;
+    }
+    selection.insertLineBreak(false);
+    return true;
+  }
+
+  /**
+   * Supply Lexical's block insertion fallback for callers that invoke `insertParagraph` directly.
+   *
+   * The editor's Enter command uses `handleEnter` so a normal Enter remains inside the callout. This hook still
+   * preserves the block's appearance and identity rules for Lexical operations that reach the element hook.
    */
   insertNewAfter(selection: RangeSelection, restoreSelection = true): CalloutNode | ParagraphNode {
-    const anchorOffset = selection.anchor.offset;
-    const lastDescendant = this.getLastDescendant();
-    const isAtEnd =
-      lastDescendant === null ||
-      (selection.anchor.key === lastDescendant.getKey() && anchorOffset === lastDescendant.getTextContentSize());
-    const newElement = isAtEnd ? $createParagraphNode() : $createCalloutNode(this.getVariant());
-    newElement.setDirection(this.getDirection());
+    const atStart = this.isAtStart(selection);
+    const atEnd = this.isAtEnd(selection);
+    const trailingLineBreak = this.getLastChild();
+    if (atEnd && $isLineBreakNode(trailingLineBreak)) trailingLineBreak.remove();
+
+    const newElement = atEnd ? $createParagraphNode() : $createCalloutNode(this.getVariant());
+    copyCalloutAppearance(this, newElement);
+    if (atStart && newElement instanceof CalloutNode) $carryBlockDataOnTurnInto(this, newElement);
     this.insertAfter(newElement, restoreSelection);
-    if (anchorOffset === 0 && !this.isEmpty()) {
+    if (atStart && !this.isEmpty()) {
       const paragraph = $createParagraphNode();
+      copyCalloutAppearance(this, paragraph);
       paragraph.select();
       this.replace(paragraph, true);
     }
     return newElement;
+  }
+
+  private isAtStart(selection: RangeSelection): boolean {
+    const point = selection.anchor;
+    if (point.type === "element") return point.key === this.getKey() && point.offset === 0;
+    const firstDescendant = this.getFirstDescendant();
+    return firstDescendant !== null && point.key === firstDescendant.getKey() && point.offset === 0;
+  }
+
+  private isAtEnd(selection: RangeSelection): boolean {
+    const point = selection.anchor;
+    if (point.type === "element") return point.key === this.getKey() && point.offset === this.getChildrenSize();
+    const lastDescendant = this.getLastDescendant();
+    return lastDescendant !== null && point.key === lastDescendant.getKey() && point.offset === lastDescendant.getTextContentSize();
+  }
+
+  private isEmptyLastLine(selection: RangeSelection): boolean {
+    const point = selection.anchor;
+    return point.type === "element" && point.key === this.getKey() && point.offset === this.getChildrenSize() && $isLineBreakNode(this.getLastChild());
   }
 
   // #region json

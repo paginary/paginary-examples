@@ -2,7 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 declare global {
   interface Window {
-    calloutBlocks?: () => Array<{ type: string; text: string }>;
+    calloutReady?: boolean;
+    calloutBlocks?: () => Array<{ type: string; text: string; variant?: string }>;
   }
 }
 
@@ -17,39 +18,50 @@ async function clickCalloutText(page: Page, needle: string, calloutIndex = 0): P
   await page.mouse.click(box.x + 2, box.y + box.height / 2);
 }
 
-const modelBlocks = (page: Page): Promise<Array<{ type: string; text: string }>> =>
+const modelBlocks = (page: Page): Promise<Array<{ type: string; text: string; variant?: string }>> =>
   page.evaluate(() => window.calloutBlocks?.() ?? []);
 
-test("Enter splits callout text and leaves to a paragraph at the callout edge", async ({ page }) => {
+test("Enter inserts a warning line break inside the callout", async ({ page }) => {
   await page.goto("/");
   await page.waitForFunction(() => window.calloutReady === true);
 
-  const original = "Warning: check the package before publishing.";
   await clickCalloutText(page, "Warning:");
   await page.keyboard.press("Home");
   for (let index = 0; index < 8; index += 1) await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Enter");
+  await page.keyboard.type("Inserted ");
 
-  await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);
-  const split = await modelBlocks(page);
-  expect(split[0]?.type).toBe("example-callout");
-  expect(split[1]?.type).toBe("example-callout");
-  expect(`${split[0]?.text ?? ""}${split[1]?.text ?? ""}`).toBe(original);
-
-  await clickCalloutText(page, "package", 1);
-  await page.keyboard.press("End");
-  await page.keyboard.press("Enter");
-  await page.keyboard.type("After");
-
-  await expect.poll(async () => (await modelBlocks(page)).some(({ type, text }) => type === "paragraph" && text === "After")).toBe(true);
+  await expect.poll(async () => (await modelBlocks(page)).length).toBe(2);
+  const blocks = await modelBlocks(page);
+  expect(blocks[0]?.type).toBe("example-callout");
+  expect(blocks[0]?.variant).toBe("warning");
+  expect(blocks[0]?.text).toContain("\nInserted ");
 });
 
-test("Enter at the end of an adjacent callout creates a paragraph between the callouts", async ({ page }) => {
+test("Enter on an empty last line leaves the callout and starts a paragraph", async ({ page }) => {
   await page.goto("/");
   await page.waitForFunction(() => window.calloutReady === true);
 
   await clickCalloutText(page, "Warning:");
   await page.keyboard.press("End");
+  await page.keyboard.press("Shift+Enter");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("After");
+
+  await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);
+  const blocks = await modelBlocks(page);
+  expect(blocks.map(({ type }) => type)).toEqual(["example-callout", "paragraph", "example-callout"]);
+  expect(blocks[0]?.variant).toBe("warning");
+  expect(blocks[0]?.text).toBe("Warning: check the package before publishing.");
+  expect(blocks[1]?.text).toBe("After");
+});
+
+test("Enter at the start of an adjacent callout creates a paragraph between the callouts", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.calloutReady === true);
+
+  await clickCalloutText(page, "Sentence 1", 1);
+  await page.keyboard.press("Home");
   await page.keyboard.press("Enter");
   await page.keyboard.type("Between");
 
