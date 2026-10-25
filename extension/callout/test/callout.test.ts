@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { JSDOM } from "jsdom";
 import { createEditor, $createParagraphNode, $createRangeSelection, $createTextNode, $getRoot, $isElementNode, $setSelection } from "lexical";
-import { fillTemplate } from "@paginary/core/headless";
+import { fillTemplate, HeadlessDocument } from "@paginary/core/headless";
 import { defaultStyleResolver, Editor, type DocumentTheme, type EditorContext, type ExtractContext, type ParagraphBlock } from "@paginary/core";
 import {
   $createCalloutNode,
@@ -198,6 +198,20 @@ test("resolves the callout indent from the variant theme", () => {
 
 test("declares callout tokens, layout cost, role, and warning variant CSS", () => {
   const extension = new CalloutExtension();
+  assert.deepEqual(extension.variantNamespaces(), [{ namespace: "callout", prefix: "--pg-callout-" }]);
+  const opened = HeadlessDocument.open(
+    readFileSync(new URL("./callout-document.json", import.meta.url), "utf8"),
+    { extensions: [extension] },
+  );
+  assert.equal(opened.loaded, true);
+  assert.deepEqual(opened.document.styleVocabulary.variantNamespaces(), [{ namespace: "callout", prefix: "--pg-callout-" }]);
+  assert.equal(
+    opened.document.styleVocabulary.refusal(
+      { kind: "variant", namespace: "callout", name: "warning" },
+      "--pg-callout-bg",
+    ),
+    null,
+  );
   assert.deepEqual(extension.themeTokens(), [
     { name: "--pg-callout-bg", value: "#eff6ff", label: "Callout background" },
     { name: "--pg-callout-accent", value: "#3b82f6", label: "Callout accent" },
