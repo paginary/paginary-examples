@@ -12,6 +12,7 @@ import {
   type RoleDef,
   type SelectionInfo,
   type ThemeTokenDef,
+  type VariantNamespaceDef,
 } from "@paginary/core";
 import {
   $findMatchingParent,
@@ -187,6 +188,9 @@ export class CalloutExtension extends EditorExtension {
     });
   }
 // #endregion theme-callout
+  variantNamespaces(): readonly VariantNamespaceDef[] {
+    return [{ namespace: "callout", prefix: "--pg-callout-" }];
+  }
 // #endregion theming
 
 // #region styles
