@@ -42,7 +42,7 @@ test("Enter inserts a warning line break inside the callout", async ({ page }) =
   expect(blocks[0]?.text).toContain("\nInserted ");
 });
 
-test("pasting rich paragraphs keeps order and puts remaining callout text after the last line", async ({ page, context }) => {
+test("pasting rich paragraphs in the middle keeps the callout band on both halves", async ({ page, context }) => {
   await page.goto("/");
   await page.waitForFunction(() => window.calloutReady === true);
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
@@ -55,13 +55,14 @@ test("pasting rich paragraphs keeps order and puts remaining callout text after 
 
   await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);
   const blocks = await modelBlocks(page);
-  expect(blocks.map(({ type }) => type)).toEqual(["example-callout", "paragraph", "example-callout"]);
+  expect(blocks.map(({ type }) => type)).toEqual(["example-callout", "example-callout", "example-callout"]);
   expect(blocks[0]?.variant).toBe("warning");
   expect(blocks[0]?.text).toBe("Warning:One");
+  expect(blocks[1]?.variant).toBe("warning");
   expect(blocks[1]?.text).toBe("Two check the package before publishing.");
 });
 
-test("pasting rich paragraphs at the callout start keeps order", async ({ page, context }) => {
+test("pasting rich paragraphs at the callout start keeps the callout band on the text after it", async ({ page, context }) => {
   await page.goto("/");
   await page.waitForFunction(() => window.calloutReady === true);
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
@@ -73,9 +74,9 @@ test("pasting rich paragraphs at the callout start keeps order", async ({ page, 
 
   await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);
   const blocks = await modelBlocks(page);
-  expect(blocks.map(({ type }) => type)).toEqual(["example-callout", "paragraph", "example-callout"]);
-  expect(blocks[0]?.variant).toBe("warning");
+  expect(blocks.map(({ type }) => type)).toEqual(["paragraph", "example-callout", "example-callout"]);
   expect(blocks[0]?.text).toBe("One");
+  expect(blocks[1]?.variant).toBe("warning");
   expect(blocks[1]?.text).toBe("TwoWarning: check the package before publishing.");
 });
 
@@ -104,6 +105,10 @@ test("Enter at the start of an adjacent callout creates a paragraph between the 
   await clickCalloutText(page, "Sentence 1", 1);
   await page.keyboard.press("Home");
   await page.keyboard.press("Enter");
+  // The caret stays at the callout's start. Wait for the new paragraph to be drawn so ArrowUp moves into it.
+  await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);
+  await page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+  await page.keyboard.press("ArrowUp");
   await page.keyboard.type("Between");
 
   await expect.poll(async () => (await modelBlocks(page)).length).toBe(3);

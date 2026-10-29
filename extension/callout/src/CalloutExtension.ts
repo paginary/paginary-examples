@@ -11,6 +11,7 @@ import {
   type EditorContext,
   type RoleDef,
   type SelectionInfo,
+  type TextBlockDef,
   type ThemeTokenDef,
   type VariantNamespaceDef,
 } from "@paginary/core";
@@ -18,8 +19,6 @@ import {
   $findMatchingParent,
   $getSelection,
   $isRangeSelection,
-  COMMAND_PRIORITY_HIGH,
-  INSERT_PARAGRAPH_COMMAND,
   type Klass,
   type LexicalEditor,
   type LexicalNode,
@@ -75,29 +74,24 @@ export class CalloutExtension extends EditorExtension {
 // #endregion class
 
 // #region register-extension
-  register(editor: LexicalEditor, ctx: EditorContext): () => void {
-    const removeEnterHandler = editor.registerCommand(
-      INSERT_PARAGRAPH_COMMAND,
-      () => {
-        const selection = $getSelection();
-        if (!$isRangeSelection(selection)) return false;
-        const callout = calloutFromSelection();
-        return callout ? callout.handleEnter(selection) : false;
-      },
-      COMMAND_PRIORITY_HIGH,
-    );
-
+  register(_editor: LexicalEditor, ctx: EditorContext): () => void {
     // Keep the active context on the extension so layout can read the document theme until cleanup.
     this.context = ctx;
     this.layouter.setContext(ctx);
     return () => {
-      removeEnterHandler();
       if (this.context !== ctx) return;
       this.context = null;
       this.layouter.setContext(null);
     };
   }
 // #endregion register-extension
+
+// #region text-blocks
+  /** Enter and paste inside a callout keep its text in one callout, with a line break between lines. */
+  textBlocks(): readonly TextBlockDef[] {
+    return [{ type: CalloutNode.getType(), newLine: "line-break" }];
+  }
+// #endregion text-blocks
 
 // #region capabilities
   capabilities(): CapabilityDeclaration {
