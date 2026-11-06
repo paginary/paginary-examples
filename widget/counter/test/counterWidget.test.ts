@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { JSDOM } from "jsdom";
 import { createEditor, $createParagraphNode, $createTextNode, $getRoot, $isElementNode } from "lexical";
-import { $createWidgetNode, $isWidgetNode, WidgetNode, coreTokens, type EditorContext, type SelectionInfo } from "@paginary/core";
+import { $createWidgetNode, $isWidgetNode, PG_CONTROL_ATTR, WidgetNode, coreTokens, type EditorContext, type SelectionInfo } from "@paginary/core";
 import { fillTemplate } from "@paginary/core/headless";
 import { WidgetHarness } from "@paginary/core/testing";
 import { counterWidget, CounterWidgetExtension, INSERT_COUNTER } from "../src/counterWidget.ts";
@@ -157,6 +157,17 @@ test("mount uses a resolved step input", async () => {
   mounted.unmount();
 });
 // #endregion mount-resolved-step
+
+test("mount marks its button as a control and leaves the count unmarked", () => {
+  const mounted = harness().mount({ count: 0 }, { document });
+  const output = mounted.element.querySelector<HTMLOutputElement>("[data-counter-count]");
+  const button = mounted.element.querySelector<HTMLButtonElement>("button");
+  assert.ok(output);
+  assert.ok(button);
+  assert.equal(button.hasAttribute(PG_CONTROL_ATTR), true);
+  assert.equal(mounted.element.querySelector(`[${PG_CONTROL_ATTR}]`), button);
+  mounted.unmount();
+});
 
 test("mount defaults to one when the step input is unwired", async () => {
   const mounted = harness().mount({ count: 0 }, { document });
