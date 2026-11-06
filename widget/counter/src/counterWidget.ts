@@ -1,5 +1,5 @@
 import { $getSelection, $insertNodes, $isRangeSelection } from "lexical";
-import { AT_CARET, EditorExtension, FONT_FAMILY, $createWidgetNode, type EditorContext, type EditorCommand, type SelectionInfo, type BakedForm, type BakeTarget, type ThemeTokenDef, type WidgetContext, type WidgetDef, type WidgetState } from "@paginary/core";
+import { AT_CARET, EditorExtension, FONT_FAMILY, PG_CONTROL_ATTR, $createWidgetNode, type EditorContext, type EditorCommand, type SelectionInfo, type BakedForm, type BakeTarget, type ThemeTokenDef, type WidgetContext, type WidgetDef, type WidgetState } from "@paginary/core";
 
 const COUNTER_IMAGE = Uint8Array.from(
   atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="),
@@ -64,6 +64,9 @@ export const counterWidget: WidgetDef = {
     const button = el.ownerDocument.createElement("button");
     button.className = "pg-counter-button";
     button.type = "button";
+    // Marked as a control a person operates, so a first click on an unselected counter adds one as well as
+    // selecting the counter. A click on the count only selects it.
+    button.setAttribute(PG_CONTROL_ATTR, "");
     button.textContent = buttonLabel(ctx);
 
     // Each lifecycle call gets a fresh, frozen context, so the handler must keep the latest one.
